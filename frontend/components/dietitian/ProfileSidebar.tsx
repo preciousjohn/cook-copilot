@@ -1,0 +1,146 @@
+"use client";
+
+import React from "react";
+import type { UserProfile } from "../../lib/types";
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  sedentary: "Sedentary",
+  light: "Light",
+  moderate: "Moderate",
+  active: "Active",
+  very_active: "Very Active",
+};
+
+const GOAL_LABELS: Record<string, string> = {
+  maintain: "Maintain",
+  lose: "Lose weight",
+  gain: "Gain weight",
+};
+
+export function ProfileSidebar({ profile }: { profile: UserProfile }) {
+  const sections: { label: string; value: string }[] = [
+    { label: "Sex", value: profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1) },
+    { label: "Age", value: `${profile.age} yrs` },
+    { label: "Height", value: `${profile.heightCm} cm` },
+    { label: "Weight", value: `${profile.weightKg} kg` },
+    { label: "Activity", value: ACTIVITY_LABELS[profile.activityLevel] ?? profile.activityLevel },
+    { label: "Goal", value: GOAL_LABELS[profile.weightGoal] ?? profile.weightGoal },
+  ];
+
+  const hasMedical = profile.medicalConditions.length > 0 && !profile.medicalConditions.every((c) => c === "none");
+  const hasDiet = profile.dietaryPreferences.length > 0;
+
+  return (
+    <div
+      style={{
+        background: "var(--card-bg)",
+        border: "1px solid var(--card-border)",
+        borderRadius: "12px",
+        padding: "20px 16px",
+        minWidth: "240px",
+        maxWidth: "260px",
+        width: "260px",
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: "0",
+      }}
+    >
+      {/* Name */}
+      <div
+        style={{
+          fontSize: "15px",
+          fontWeight: 700,
+          color: "var(--fg)",
+          marginBottom: "16px",
+          wordBreak: "break-word",
+        }}
+      >
+        {profile.profileName}
+      </div>
+
+      {/* Basic info rows */}
+      {sections.map((s) => (
+        <div
+          key={s.label}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            padding: "5px 0",
+            borderBottom: "1px solid var(--border-light, rgba(0,0,0,0.06))",
+          }}
+        >
+          <span style={{ fontSize: "11px", color: "var(--fg3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {s.label}
+          </span>
+          <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg)" }}>{s.value}</span>
+        </div>
+      ))}
+
+      {/* Medical conditions */}
+      {hasMedical && (
+        <div style={{ marginTop: "14px" }}>
+          <div style={{ fontSize: "11px", color: "var(--fg3)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>
+            Medical
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            {profile.medicalConditions
+              .filter((c) => c !== "none")
+              .map((c) => (
+                <span
+                  key={c}
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontSize: "11px",
+                    background: "var(--bg2)",
+                    color: "var(--fg2)",
+                    border: "1px solid var(--card-border)",
+                  }}
+                >
+                  {c.replace(/_/g, " ")}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dietary preferences */}
+      {hasDiet && (
+        <div style={{ marginTop: "14px" }}>
+          <div style={{ fontSize: "11px", color: "var(--fg3)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>
+            Diet
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            {profile.dietaryPreferences.map((d) => (
+              <span
+                key={d}
+                style={{
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  fontSize: "11px",
+                  background: "var(--bg2)",
+                  color: "var(--fg2)",
+                  border: "1px solid var(--card-border)",
+                }}
+              >
+                {d.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {profile.notes && (
+        <div style={{ marginTop: "14px" }}>
+          <div style={{ fontSize: "11px", color: "var(--fg3)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
+            Notes
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--fg2)", lineHeight: 1.4 }}>{profile.notes}</div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,175 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   CookPilot — Global Design Tokens & Base Styles
+   ─────────────────────────────────────────────────────────────────────────────
+   Two themes are applied via data-theme attribute on <html>:
+     data-theme="landing" → dark, cinematic (Step 1)
+     data-theme="app"     → clean white, Morphing Matter Lab aesthetic (Steps 2-6)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Landing theme (dark, cinematic) ─────────────────────────────────────── */
+:root,
+[data-theme="landing"] {
+  --bg: #080808;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --fg: #f0f0f0;
+  --fg2: rgba(240, 240, 240, 0.65);
+  --fg3: rgba(240, 240, 240, 0.35);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent: #ffffff;
+  --accent-fg: #080808;
+
+  /* Syringe palette */
+  --syringe-1: #e05252;
+  --syringe-2: #4a9eda;
+  --syringe-3: #4aad6e;
+  --syringe-4: #d4854a;
+}
+
+/* ── App theme (dark header + light content) ──────────────────────────────── */
+[data-theme="app"] {
+  --bg: #fafafa;
+  --bg2: #f2f2f2;
+  --bg3: #e8e8e8;
+  --fg: #111111;
+  --fg2: #555555;
+  --fg3: #999999;
+  --border: #e0e0e0;
+  --border-light: #ebebeb;
+  --card-bg: #ffffff;
+  --card-border: #e8e8e8;
+  --accent: #111111;
+  --accent-fg: #ffffff;
+
+  /* Header stays dark (same as landing) */
+  --header-bg: #080808;
+  --header-border: rgba(255, 255, 255, 0.08);
+  --header-fg: rgba(240, 240, 240, 0.9);
+  --header-fg2: rgba(240, 240, 240, 0.4);
+
+  --syringe-1: #c0392b;
+  --syringe-2: #2980b9;
+  --syringe-3: #27ae60;
+  --syringe-4: #d35400;
+}
+
+/* ── Base reset ───────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: -1px;
+}
+
+::selection {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Scrollbar (app theme) ────────────────────────────────────────────────── */
+[data-theme="app"] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+[data-theme="app"] ::-webkit-scrollbar-track {
+  background: var(--bg2);
+}
+[data-theme="app"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+[data-theme="app"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--fg3);
+}
+
+/* ── Range input ──────────────────────────────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--fg);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Hide Next.js dev indicator */
+[data-nextjs-dialog-overlay],
+[data-next-hide-fouc],
+nextjs-portal,
+#__next-build-indicator {
+  display: none !important;
+}
