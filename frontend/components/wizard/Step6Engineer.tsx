@@ -53,10 +53,12 @@ function DownloadIcon() {
 
 function RefreshIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="1 4 1 10 7 10" />
-      <path d="M3.51 15a9 9 0 1 0 .49-3" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ overflow: "visible" }}>
+      <path d="M23 4v6h-6" />
+      <path d="M1 20v-6h6" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   );
 }
@@ -95,20 +97,7 @@ G90 ; Use absolute coordinates
 // MetricTile — print stats card with optional stepper
 // ─────────────────────────────────────────────────────────────────────────────
 
-function MetricTile({
-  label,
-  value,
-  unit,
-  onUp,
-  onDown,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  onUp?: () => void;
-  onDown?: () => void;
-}) {
-  const hasStepper = !!(onUp && onDown);
+function MetricTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div style={{
       flex: "1 1 0", padding: "14px 16px",
@@ -123,35 +112,12 @@ function MetricTile({
       }}>
         {label}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{
-          fontSize: 18, fontWeight: 700, color: T.ink,
-          fontFamily: "'Geist', sans-serif", letterSpacing: "-0.02em",
-        }}>
-          {value}{unit ? <span style={{ fontSize: 13, fontWeight: 500, color: T.muted, marginLeft: 2 }}>{unit}</span> : null}
-        </div>
-        {hasStepper && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <button onClick={onUp} style={{
-              width: 18, height: 14, borderRadius: "4px 4px 0 0", border: `1px solid ${T.border}`,
-              background: "transparent", cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center", padding: 0,
-            }}>
-              <svg width="8" height="6" viewBox="0 0 8 6" fill={T.muted}>
-                <path d="M4 0L8 6H0Z" />
-              </svg>
-            </button>
-            <button onClick={onDown} style={{
-              width: 18, height: 14, borderRadius: "0 0 4px 4px", border: `1px solid ${T.border}`,
-              borderTop: "none", background: "transparent", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-            }}>
-              <svg width="8" height="6" viewBox="0 0 8 6" fill={T.muted}>
-                <path d="M4 6L0 0H8Z" />
-              </svg>
-            </button>
-          </div>
-        )}
+      <div style={{
+        fontSize: 18, fontWeight: 700, color: T.ink,
+        fontFamily: "'Geist', sans-serif", letterSpacing: "-0.02em",
+      }}>
+        {value}
+        {unit && <span style={{ fontSize: 13, fontWeight: 500, color: T.muted, marginLeft: 3 }}>{unit}</span>}
       </div>
     </div>
   );
@@ -374,18 +340,12 @@ export function Step6Engineer() {
 
   const [regenerating, setRegenerating] = useState(false);
   const [gcodeVersion, setGcodeVersion] = useState(0);
-  const [localLayers, setLocalLayers] = useState<number | null>(null);
-  const [localPieces, setLocalPieces] = useState<number | null>(null);
-  // internal state for calibration per-syringe
   const [calTool, setCalTool] = useState(0);
   const [calEM, setCalEM] = useState(0.1);
   const [calLH, setCalLH] = useState(0.1);
 
   const g = gcode || engineerOutput?.gcode || "";
   const meta = engineerOutput?.metadata;
-
-  const displayLayers = localLayers ?? meta?.num_layers ?? 0;
-  const displayPieces = localPieces ?? engineerOutput?.pieces ?? 1;
   const accentColor = SYRINGE_COLORS[calTool % SYRINGE_COLORS.length];
   const numSyringes = chefOutput?.syringe_recipes?.length ?? emValues.length;
 
@@ -462,9 +422,9 @@ export function Step6Engineer() {
 
           {/* Page title */}
           <h2 style={{
-            margin: 0, fontSize: 32, fontWeight: 700,
-            color: T.ink, fontFamily: "'Geist', sans-serif",
-            letterSpacing: "-0.02em",
+            margin: 0, fontSize: 36, fontWeight: 400,
+            color: T.ink, fontFamily: "'Instrument Serif', serif",
+            letterSpacing: "-0.01em", lineHeight: 1.1,
           }}>
             Printing Details
           </h2>
@@ -542,17 +502,13 @@ export function Step6Engineer() {
                 />
                 <MetricTile
                   label="Layers"
-                  value={displayLayers > 0 ? String(displayLayers) : "—"}
-                  unit={displayLayers > 0 ? "layers" : undefined}
-                  onUp={() => setLocalLayers((displayLayers || 0) + 1)}
-                  onDown={() => setLocalLayers(Math.max(1, (displayLayers || 1) - 1))}
+                  value={meta?.num_layers ? String(meta.num_layers) : "—"}
+                  unit={meta?.num_layers ? "layers" : undefined}
                 />
                 <MetricTile
                   label="Amount"
-                  value={String(displayPieces)}
+                  value={String(engineerOutput.pieces ?? 1)}
                   unit="pieces"
-                  onUp={() => setLocalPieces(displayPieces + 1)}
-                  onDown={() => setLocalPieces(Math.max(1, displayPieces - 1))}
                 />
               </div>
 
