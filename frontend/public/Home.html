@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CookCopilot â Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --cream:#FFF4E6;
+    --ink:#1A1410;
+    --tomato:#FF5A3C;
+    --butter:#FFC83D;
+    --basil:#3DB96B;
+    --grape:#7B5BE8;
+    --sky:#4EC0E6;
+    --rose:#FF9FB2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow-x:hidden}
+  body{
+    font-family: 'Geist', system-ui, sans-serif;
+    color:var(--ink);
+    background:var(--cream);
+    -webkit-font-smoothing:antialiased;
+  }
+  .serif{font-family:'Instrument Serif', serif; font-weight:400; letter-spacing:-0.01em}
+  .mono{font-family:'Geist Mono', ui-monospace, monospace}
+  button{font-family:inherit; cursor:pointer; border:none; background:none}
+
+  /* noodle wiggle */
+  @keyframes wiggle {
+    0%,100%{transform:rotate(-1.5deg)}
+    50%{transform:rotate(1.5deg)}
+  }
+  @keyframes float {
+    0%,100%{transform:translateY(0) rotate(var(--r,0deg))}
+    50%{transform:translateY(-14px) rotate(var(--r,0deg))}
+  }
+  @keyframes drift {
+    0%{transform:translate(0,0)}
+    33%{transform:translate(20px,-15px)}
+    66%{transform:translate(-12px,18px)}
+    100%{transform:translate(0,0)}
+  }
+  @keyframes noodleDraw {
+    from{stroke-dashoffset:var(--len,400)}
+    to{stroke-dashoffset:0}
+  }
+  @keyframes pulse {
+    0%,100%{transform:scale(1); opacity:.8}
+    50%{transform:scale(1.08); opacity:1}
+  }
+  @keyframes spin {
+    to{transform:rotate(360deg)}
+  }
+  @keyframes extrude {
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-3px)}
+  }
+
+  .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after{
+    animation:none !important;
+    transition-duration:0.15s !important;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useRef, useMemo } = React;
+
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "variant": "candy",
+  "motion": "off",
+  "heading": "Make with CookCopilot\n{word}",
+  "subtext": "AI-powered personalized food fabrication"
+} /*EDITMODE-END*/;
+
+// ---------- Themes ----------
+const THEMES = {
+  candy: {
+    name: "Candy-bright",
+    bg: "#FFF4E6",
+    ink: "#1A1410",
+    muted: "#6B5D50",
+    card: "#FFFFFF",
+    cardBorder: "#1A1410",
+    accent: "#FF5A3C",
+    accentInk: "#FFF4E6",
+    chipShadow: "rgba(26,20,16,1)",
+    profileColors: ["#FFC83D", "#3DB96B", "#7B5BE8"],
+    noodleColors: ["#FF5A3C", "#1A1410", "#FFC83D"],
+    headingStyle: { color: "#1A1410" },
+    accentWord: "#FF5A3C",
+    tagBg: "#1A1410",
+    tagInk: "#FFF4E6"
+  },
+  lab: {
+    name: "Kitchen-lab",
+    bg: "#0B0D10",
+    ink: "#EAF2E8",
+    muted: "#8FA394",
+    card: "#14181D",
+    cardBorder: "#2A3038",
+    accent: "#C6FF4D",
+    accentInk: "#0B0D10",
+    chipShadow: "#C6FF4D",
+    profileColors: ["#C6FF4D", "#4DD0FF", "#FF4DA6"],
+    noodleColors: ["#C6FF4D", "#4DD0FF", "#FF4DA6"],
+    headingStyle: { color: "#EAF2E8" },
+    accentWord: "#C6FF4D",
+    tagBg: "#C6FF4D",
+    tagInk: "#0B0D10"
+  },
+  artisan: {
+    name: "Artisanal",
+    bg: "#F3E6D3",
+    ink: "#2B1A10",
+    muted: "#78604A",
+    card: "#FBF3E4",
+    cardBorder: "#2B1A10",
+    accent: "#C94A1B",
+    accentInk: "#FBF3E4",
+    chipShadow: "#2B1A10",
+    profileColors: ["#D98E3A", "#7C9A4F", "#B5553F"],
+    noodleColors: ["#C94A1B", "#2B1A10", "#7C9A4F"],
+    headingStyle: { color: "#2B1A10", fontStyle: "italic" },
+    accentWord: "#C94A1B",
+    tagBg: "#2B1A10",
+    tagInk: "#FBF3E4"
+  }
+};
+
+// ---------- Noodle SVG glyphs (distinct per profile) ----------
+function NoodleGlyph({ kind, color, shadowColor, animated, seed }) {
+  const strokeW = 12;
+  const common = {
+    fill: "none",
+    strokeWidth: strokeW,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  };
+  if (kind === "swirl") {
+    return (
+      <svg viewBox="0 0 160 160" width="100%" height="100%" aria-hidden>
+        <g transform="translate(2,5)">
+          <path d="M140,80 C140,115 112,138 80,138 C52,138 30,118 30,90 C30,67 48,50 70,50 C88,50 102,63 102,80 C102,93 92,103 80,103 C71,103 65,97 65,89 C65,83 70,79 76,79" {...common} stroke={shadowColor} opacity="0.35" />
+        </g>
+        <path d="M140,80 C140,115 112,138 80,138 C52,138 30,118 30,90 C30,67 48,50 70,50 C88,50 102,63 102,80 C102,93 92,103 80,103 C71,103 65,97 65,89 C65,83 70,79 76,79" {...common} stroke={color} style={animated ? { strokeDasharray: 400, animation: 'noodleDraw 1.2s ease-out' } : {}} />
+        <circle cx="128" cy="45" r="5" fill={color} />
+        <circle cx="30" cy="38" r="3.5" fill={color} opacity="0.7" />
+      </svg>);
+  }
+  if (kind === "wave") {
+    return (
+      <svg viewBox="0 0 160 160" width="100%" height="100%" aria-hidden>
+        <g transform="translate(3,6)">
+          <path d="M20,110 Q40,70 60,110 T100,110 T140,110" {...common} stroke={shadowColor} opacity="0.35" />
+          <path d="M20,80 Q40,40 60,80 T100,80 T140,80" {...common} stroke={shadowColor} opacity="0.35" />
+          <path d="M20,50 Q40,10 60,50 T100,50 T140,50" {...common} stroke={shadowColor} opacity="0.35" />
+        </g>
+        <path d="M20,110 Q40,70 60,110 T100,110 T140,110" {...common} stroke={color} style={animated ? { strokeDasharray: 300, animation: 'noodleDraw 1.3s ease-out' } : {}} />
+        <path d="M20,80 Q40,40 60,80 T100,80 T140,80" {...common} stroke={color} style={animated ? { strokeDasharray: 300, animation: 'noodleDraw 1.4s .1s ease-out both' } : {}} />
+        <path d="M20,50 Q40,10 60,50 T100,50 T140,50" {...common} stroke={color} style={animated ? { strokeDasharray: 300, animation: 'noodleDraw 1.5s .2s ease-out both' } : {}} />
+      </svg>);
+  }
+  if (kind === "knot") {
+    return (
+      <svg viewBox="0 0 160 160" width="100%" height="100%" aria-hidden>
+        <g transform="translate(3,5)">
+          <path d="M40,60 C40,30 70,20 90,40 C110,60 60,100 40,100 C20,100 20,70 50,70 C80,70 130,70 130,100 C130,130 100,130 80,110 C60,90 100,50 120,50" {...common} stroke={shadowColor} opacity="0.35" />
+        </g>
+        <path d="M40,60 C40,30 70,20 90,40 C110,60 60,100 40,100 C20,100 20,70 50,70 C80,70 130,70 130,100 C130,130 100,130 80,110 C60,90 100,50 120,50" {...common} stroke={color} style={animated ? { strokeDasharray: 500, animation: 'noodleDraw 1.4s ease-out' } : {}} />
+        <circle cx="140" cy="40" r="4" fill={color} />
+      </svg>);
+  }
+  return null;
+}
+
+// ---------- Plus icon for "Add profile" ----------
+function PlusGlyph({ color }) {
+  return (
+    <svg viewBox="0 0 160 160" width="100%" height="100%" aria-hidden>
+      <line x1="80" y1="36" x2="80" y2="124" stroke={color} strokeWidth="12" strokeLinecap="round" />
+      <line x1="36" y1="80" x2="124" y2="80" stroke={color} strokeWidth="12" strokeLinecap="round" />
+    </svg>);
+}
+
+// ---------- Ambient illustrations ----------
+function AmbientNoodles({ theme, motion }) {
+  if (motion === "off") return null;
+  const pieces = [
+  { x: "4%", y: "12%", size: 120, rot: -12, color: theme.profileColors[0], dur: "9s", delay: "0s", kind: "curl" },
+  { x: "88%", y: "8%", size: 140, rot: 18, color: theme.profileColors[1], dur: "11s", delay: "1s", kind: "zig" },
+  { x: "2%", y: "62%", size: 160, rot: -8, color: theme.profileColors[2], dur: "12s", delay: ".5s", kind: "zig" },
+  { x: "90%", y: "70%", size: 130, rot: 24, color: theme.accent, dur: "10s", delay: "1.4s", kind: "curl" },
+  { x: "48%", y: "3%", size: 70, rot: 0, color: theme.accent, dur: "7s", delay: ".8s", kind: "dot" },
+  { x: "14%", y: "88%", size: 80, rot: 0, color: theme.profileColors[0], dur: "8s", delay: "1.2s", kind: "star" },
+  { x: "82%", y: "40%", size: 60, rot: 0, color: theme.profileColors[1], dur: "9s", delay: ".3s", kind: "dot" },
+  { x: "6%", y: "40%", size: 55, rot: 0, color: theme.profileColors[2], dur: "10s", delay: ".6s", kind: "star" }];
+
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {pieces.map((p, i) =>
+      <div key={i}
+      style={{
+        position: "absolute", left: p.x, top: p.y,
+        width: p.size, height: p.size,
+        ['--r']: `${p.rot}deg`,
+        animation: motion === 'high' ?
+        `float ${p.dur} ease-in-out ${p.delay} infinite, drift ${parseFloat(p.dur) + 4}s ease-in-out ${p.delay} infinite` :
+        `float ${p.dur} ease-in-out ${p.delay} infinite`,
+        transform: `rotate(${p.rot}deg)`,
+        opacity: .9
+      }}>
+          <AmbientPiece kind={p.kind} color={p.color} />
+        </div>
+      )}
+    </div>);
+}
+
+function AmbientPiece({ kind, color }) {
+  if (kind === "curl") {
+    return (
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <path d="M10,70 C10,40 40,20 60,40 C80,60 50,85 30,70 C15,58 25,40 45,50"
+        fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" />
+      </svg>);
+  }
+  if (kind === "zig") {
+    return (
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <path d="M10,70 Q25,30 40,70 T70,70 T95,70"
+        fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>);
+  }
+  if (kind === "dot") {
+    return (
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <circle cx="50" cy="50" r="14" fill={color} />
+      </svg>);
+  }
+  if (kind === "star") {
+    return (
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <g stroke={color} strokeWidth="8" strokeLinecap="round">
+          <line x1="50" y1="20" x2="50" y2="80" />
+          <line x1="20" y1="50" x2="80" y2="50" />
+          <line x1="30" y1="30" x2="70" y2="70" />
+          <line x1="70" y1="30" x2="30" y2="70" />
+        </g>
+      </svg>);
+  }
+  return null;
+}
+
+// ---------- Logo ----------
+function Logo({ theme }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <img src="logo.svg?v=2" alt="CookCopilot" style={{ width: 38, height: 38, display: "block" }} />
+      <div style={{ fontFamily: "'Geist', sans-serif", fontWeight: 600, letterSpacing: "-0.01em", fontSize: 17, color: theme.ink }}>
+        CookCopilot
+      </div>
+    </div>);
+}
+
+// ---------- Profile card ----------
+function ProfileCard({ profile, idx, theme, selected, onClick, motion }) {
+  const isAdd = profile.type === "add";
+  const color = isAdd ? theme.muted : theme.profileColors[idx % theme.profileColors.length];
+  const [hover, setHover] = useState(false);
+  const lift = selected ? 10 : hover ? 6 : 0;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: "relative",
+        display: "flex", flexDirection: "column", alignItems: "stretch",
+        width: 200,
+        padding: 0,
+        borderRadius: 28,
+        background: selected ? color : theme.card,
+        border: `2.5px solid ${theme.cardBorder}`,
+        boxShadow: `0 ${10 - lift}px 0 ${theme.cardBorder}`,
+        transform: `translateY(-${lift}px)`,
+        transition: "transform .18s cubic-bezier(.2,.9,.3,1.3), box-shadow .18s, background .2s",
+        outline: "none",
+        textAlign: "left",
+        overflow: "hidden"
+      }}
+      aria-pressed={selected}>
+
+      <div style={{
+        aspectRatio: "1 / 1",
+        background: selected ? "rgba(255,255,255,0.18)" : isAdd ? "transparent" : color,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24,
+        borderBottom: `2.5px solid ${theme.cardBorder}`,
+        position: "relative"
+      }}>
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: selected ? 0.25 : 0.12 }} viewBox="0 0 100 100" preserveAspectRatio="none">
+          {[20, 40, 60, 80].map((v) => <line key={"h" + v} x1="0" y1={v} x2="100" y2={v} stroke={theme.ink} strokeWidth="0.3" />)}
+          {[20, 40, 60, 80].map((v) => <line key={"v" + v} x1={v} y1="0" x2={v} y2="100" stroke={theme.ink} strokeWidth="0.3" />)}
+        </svg>
+        <div style={{
+          width: "78%", height: "78%",
+          animation: motion !== "off" && (hover || selected) ? "wiggle 1.4s ease-in-out infinite" : "none"
+        }}>
+          {isAdd ?
+          <PlusGlyph color={theme.ink} /> :
+          <NoodleGlyph kind={profile.kind} color={selected ? theme.ink : theme.noodleColors[0]} shadowColor={selected ? "rgba(255,255,255,.4)" : theme.cardBorder} animated={hover || selected} />
+          }
+        </div>
+        {selected && !isAdd &&
+        <div style={{
+          position: "absolute", top: 12, right: 12,
+          width: 28, height: 28, borderRadius: "50%",
+          background: theme.ink, color: theme.accentInk,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 14, fontWeight: 700
+        }}>✓</div>
+        }
+      </div>
+
+      <div style={{
+        padding: "16px 18px 18px",
+        background: selected ? color : theme.card
+      }}>
+        <div style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 26, lineHeight: 1,
+          color: selected ? theme.ink : theme.ink
+        }}>
+          {profile.name}
+        </div>
+        <div style={{
+          marginTop: 6, fontSize: 12,
+          fontFamily: "'Geist Mono', monospace",
+          color: selected ? theme.ink : theme.muted,
+          letterSpacing: ".02em",
+          textTransform: "uppercase"
+        }}>
+          {profile.tag}
+        </div>
+      </div>
+    </button>);
+}
+
+// ---------- Tweaks panel ----------
+function TweaksPanel({ state, setState, visible, onClose, theme }) {
+  if (!visible) return null;
+  const Row = ({ label, children }) =>
+  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+      <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: theme.muted }}>{label}</div>
+      {children}
+    </div>;
+
+  const Seg = ({ value, options, onChange }) =>
+  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {options.map((o) =>
+    <button key={o.v} onClick={() => onChange(o.v)}
+    style={{
+      padding: "8px 12px", borderRadius: 10,
+      border: `1.5px solid ${theme.cardBorder}`,
+      background: value === o.v ? theme.ink : "transparent",
+      color: value === o.v ? theme.accentInk : theme.ink,
+      fontSize: 13, fontWeight: 500
+    }}>{o.l}</button>
+    )}
+    </div>;
+
+  return (
+    <div style={{
+      position: "fixed", right: 20, bottom: 20, zIndex: 50,
+      width: 320, padding: 20,
+      background: theme.card,
+      border: `2.5px solid ${theme.cardBorder}`,
+      borderRadius: 20,
+      boxShadow: `0 10px 0 ${theme.cardBorder}`,
+      color: theme.ink
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24 }}>Tweaks</div>
+        <button onClick={onClose} style={{ fontSize: 18, color: theme.muted }}>✕</button>
+      </div>
+      <Row label="Aesthetic">
+        <Seg value={state.variant} onChange={(v) => setState({ variant: v })}
+        options={[{ v: "candy", l: "Candy" }, { v: "lab", l: "Lab" }, { v: "artisan", l: "Artisan" }]} />
+      </Row>
+      <Row label="Motion">
+        <Seg value={state.motion} onChange={(v) => setState({ motion: v })}
+        options={[{ v: "off", l: "Off" }, { v: "medium", l: "Medium" }, { v: "high", l: "High" }]} />
+      </Row>
+      <Row label="Heading">
+        <textarea value={state.heading} onChange={(e) => setState({ heading: e.target.value })}
+        rows={2}
+        style={{
+          width: "100%", padding: "10px 12px", borderRadius: 10,
+          border: `1.5px solid ${theme.cardBorder}`, background: "transparent",
+          color: theme.ink, fontFamily: "'Geist', sans-serif", fontSize: 14, resize: "vertical"
+        }} />
+      </Row>
+      <Row label="Subtext">
+        <textarea value={state.subtext} onChange={(e) => setState({ subtext: e.target.value })}
+        rows={3}
+        style={{
+          width: "100%", padding: "10px 12px", borderRadius: 10,
+          border: `1.5px solid ${theme.cardBorder}`, background: "transparent",
+          color: theme.ink, fontFamily: "'Geist', sans-serif", fontSize: 14, resize: "vertical"
+        }} />
+      </Row>
+    </div>);
+}
+
+// ---------- New Profile Modal ----------
+function NewProfileModal({ visible, onClose, onCreate, theme }) {
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState({
+    name: "",
+    diet: "Omnivore",
+    sex: "Prefer not to say",
+    age: "",
+    height: "",
+    weight: "",
+    activity: "Moderate",
+    allergies: [],
+  });
+
+  useEffect(() => {
+    if (visible) {
+      setStep(0);
+      setData({
+        name: "", diet: "Omnivore", sex: "Prefer not to say",
+        age: "", height: "", weight: "",
+        activity: "Moderate", allergies: [],
+      });
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [visible, onClose]);
+
+  if (!visible) return null;
+
+  const upd = (patch) => setData((d) => ({ ...d, ...patch }));
+  const toggleAllergy = (a) => {
+    setData((d) => ({
+      ...d,
+      allergies: d.allergies.includes(a)
+        ? d.allergies.filter((x) => x !== a)
+        : [...d.allergies, a],
+    }));
+  };
+
+  const STEPS = ["Basics", "Body", "Lifestyle"];
+  const canNext =
+    (step === 0 && data.name.trim().length > 0) ||
+    (step === 1) ||
+    (step === 2);
+
+  const DIETS = ["Omnivore", "Vegetarian", "Vegan", "Pescatarian", "Keto", "Halal", "Kosher"];
+  const SEXES = ["Female", "Male", "Other", "Prefer not to say"];
+  const ACTIVITIES = [
+    { v: "Sedentary", d: "Desk job" },
+    { v: "Light", d: "1-3x/week" },
+    { v: "Moderate", d: "3-5x/week" },
+    { v: "Active", d: "6-7x/week" },
+    { v: "Very Active", d: "Daily + training" },
+  ];
+  const ALLERGIES = ["Peanuts", "Tree nuts", "Dairy", "Eggs", "Wheat/Gluten", "Soy", "Fish", "Shellfish", "Sesame"];
+
+  const Chip = ({ active, onClick, children, sub }) => (
+    <button onClick={onClick} style={{
+      display:"flex", flexDirection:"column", alignItems:"flex-start", gap:2,
+      padding: sub ? "10px 14px" : "8px 14px",
+      borderRadius: 999,
+      border: `2px solid ${theme.cardBorder}`,
+      background: active ? theme.cardBorder : "transparent",
+      color: active ? (theme.cream || "#FFF4E6") : theme.ink,
+      fontFamily: "'Geist', sans-serif",
+      fontSize: 14, fontWeight: 500,
+      cursor: "pointer",
+      transition: "background .15s, color .15s",
+      textAlign:"left",
+    }}>
+      <span>{children}</span>
+      {sub && <span style={{fontSize:11, opacity:.7, fontWeight:400}}>{sub}</span>}
+    </button>
+  );
+
+  const Field = ({ label, children }) => (
+    <label style={{display:"flex", flexDirection:"column", gap:6, flex:1, minWidth:0}}>
+      <span style={{
+        fontFamily:"'Geist Mono', monospace", fontSize:11,
+        letterSpacing:".08em", textTransform:"uppercase", color: theme.muted,
+      }}>{label}</span>
+      {children}
+    </label>
+  );
+  const Input = (props) => (
+    <input {...props} style={{
+      padding:"12px 14px", borderRadius:12,
+      border:`2px solid ${theme.cardBorder}`,
+      background: "transparent",
+      color: theme.ink,
+      fontFamily:"'Geist', sans-serif", fontSize:16,
+      outline:"none",
+      ...(props.style || {}),
+    }}/>
+  );
+
+  return (
+    <div style={{
+      position:"fixed", inset:0, zIndex:60,
+      display:"flex", alignItems:"center", justifyContent:"center",
+      background: "rgba(26,20,16,.42)",
+      backdropFilter:"blur(4px)",
+      padding: 24,
+    }} onClick={onClose}>
+      <div onClick={(e)=>e.stopPropagation()} style={{
+        width:"min(560px, 100%)",
+        background: theme.card,
+        border: `2.5px solid ${theme.cardBorder}`,
+        borderRadius: 24,
+        boxShadow: `0 10px 0 ${theme.cardBorder}`,
+        padding: "28px 32px 26px",
+        color: theme.ink,
+        maxHeight: "90vh",
+        overflow: "auto",
+      }}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 6}}>
+          <div style={{display:"flex", alignItems:"center", gap:10}}>
+            {STEPS.map((s, i) => (
+              <React.Fragment key={i}>
+                <div style={{
+                  width: 28, height: 28, borderRadius:"50%",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  border:`2px solid ${theme.cardBorder}`,
+                  background: i <= step ? theme.cardBorder : "transparent",
+                  color: i <= step ? (theme.cream || "#FFF4E6") : theme.muted,
+                  fontFamily:"'Geist Mono', monospace", fontSize:12, fontWeight:600,
+                }}>{i+1}</div>
+                {i < STEPS.length-1 && (
+                  <div style={{width:22, height:2, background: i < step ? theme.cardBorder : theme.muted+"40"}}/>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          <button onClick={onClose} style={{fontSize:22, color:theme.muted, lineHeight:1}}>✕</button>
+        </div>
+
+        <h2 className="serif" style={{margin:"18px 0 4px", fontSize:34, lineHeight:1, color:theme.ink}}>
+          {step === 0 && "New profile"}
+          {step === 1 && "Body basics"}
+          {step === 2 && "Lifestyle"}
+        </h2>
+        <p style={{margin:"0 0 22px", fontSize:14, color:theme.muted, lineHeight:1.5}}>
+          {step === 0 && "Helps us tune flavors and nutrition targets."}
+          {step === 1 && "Optional — skip any you don't want to share."}
+          {step === 2 && "Fine-tunes portions and keeps allergens out."}
+        </p>
+
+        {step === 0 && (
+          <div style={{display:"flex", flexDirection:"column", gap:22}}>
+            <Field label="Profile name">
+              <Input autoFocus value={data.name} onChange={(e)=>upd({name:e.target.value})}
+                placeholder="e.g. Alice"/>
+            </Field>
+            <Field label="Diet">
+              <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
+                {DIETS.map(d => (
+                  <Chip key={d} active={data.diet===d} onClick={()=>upd({diet:d})}>{d}</Chip>
+                ))}
+              </div>
+            </Field>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div style={{display:"flex", flexDirection:"column", gap:22}}>
+            <Field label="Sex">
+              <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
+                {SEXES.map(s => (
+                  <Chip key={s} active={data.sex===s} onClick={()=>upd({sex:s})}>{s}</Chip>
+                ))}
+              </div>
+            </Field>
+            <div style={{display:"flex", gap:14}}>
+              <Field label="Age (yrs)">
+                <Input type="number" value={data.age} onChange={(e)=>upd({age:e.target.value})} placeholder="—"/>
+              </Field>
+              <Field label="Height (cm)">
+                <Input type="number" value={data.height} onChange={(e)=>upd({height:e.target.value})} placeholder="—"/>
+              </Field>
+              <Field label="Weight (kg)">
+                <Input type="number" value={data.weight} onChange={(e)=>upd({weight:e.target.value})} placeholder="—"/>
+              </Field>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div style={{display:"flex", flexDirection:"column", gap:22}}>
+            <Field label="Activity level">
+              <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
+                {ACTIVITIES.map(a => (
+                  <Chip key={a.v} active={data.activity===a.v} onClick={()=>upd({activity:a.v})} sub={a.d}>{a.v}</Chip>
+                ))}
+              </div>
+            </Field>
+            <Field label="Allergies & intolerances">
+              <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
+                {ALLERGIES.map(a => (
+                  <Chip key={a} active={data.allergies.includes(a)} onClick={()=>toggleAllergy(a)}>{a}</Chip>
+                ))}
+              </div>
+            </Field>
+          </div>
+        )}
+
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop: 28, gap:12}}>
+          <button onClick={()=> step===0 ? onClose() : setStep(step-1)} style={{
+            padding:"12px 18px", borderRadius:14,
+            background:"transparent", color: theme.muted,
+            fontSize:14, fontWeight:500,
+          }}>{step === 0 ? "Cancel" : "← Back"}</button>
+          <button disabled={!canNext} onClick={()=> {
+            if (step < STEPS.length-1) setStep(step+1);
+            else onCreate(data);
+          }} style={{
+            display:"flex", alignItems:"center", gap:10,
+            padding:"14px 22px",
+            borderRadius:16,
+            background: canNext ? "rgb(21, 60, 54)" : "transparent",
+            color: canNext ? "#FFF4E6" : theme.muted,
+            border:`2.5px solid ${canNext ? theme.cardBorder : theme.muted+"55"}`,
+            boxShadow: canNext ? `0 6px 0 ${theme.cardBorder}` : "none",
+            fontSize:16, fontWeight:600,
+            cursor: canNext ? "pointer" : "not-allowed",
+            transition:"all .15s",
+          }}>
+            {step === STEPS.length-1 ? "Create profile" : "Continue"}
+            <svg width="18" height="18" viewBox="0 0 26 26">
+              <path d="M4 13 H20 M14 7 L20 13 L14 19" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Main ----------
+function App() {
+  const [state, _setState] = useState(TWEAKS);
+  const setState = (patch) => {
+    _setState((prev) => {
+      const next = { ...prev, ...patch };
+      try {window.parent.postMessage({ type: '__edit_mode_set_keys', edits: patch }, '*');} catch (e) {}
+      return next;
+    });
+  };
+  const theme = THEMES[state.variant] || THEMES.candy;
+  const DEFAULT_PROFILES = [
+    { id: "alex", name: "Alex", tag: "Vegetarian", kind: "swirl" },
+    { id: "jordan", name: "Jordan", tag: "Gluten-free", kind: "knot" },
+  ];
+  const [profiles, setProfiles] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("cc_profiles") || "null");
+      return Array.isArray(saved) && saved.length ? saved : DEFAULT_PROFILES;
+    } catch (e) { return DEFAULT_PROFILES; }
+  });
+  const [selected, setSelected] = useState(() => {
+    try { return localStorage.getItem("cc_selected") || null; } catch (e) { return null; }
+  });
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem("cc_profiles", JSON.stringify(profiles)); } catch(e){}
+  }, [profiles]);
+  useEffect(() => {
+    try {
+      if (selected) localStorage.setItem("cc_selected", selected);
+      else localStorage.removeItem("cc_selected");
+    } catch(e){}
+  }, [selected]);
+
+  useEffect(() => {
+    try {
+      const fresh = localStorage.getItem("cc_new_profile_id");
+      if (fresh) {
+        setSelected(fresh);
+        localStorage.removeItem("cc_new_profile_id");
+      }
+    } catch(e){}
+  }, []);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      const d = e.data || {};
+      if (d.type === "__activate_edit_mode") setTweaksOpen(true);
+      if (d.type === "__deactivate_edit_mode") setTweaksOpen(false);
+    };
+    window.addEventListener("message", onMsg);
+    try {window.parent.postMessage({ type: "__edit_mode_available" }, "*");} catch (e) {}
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  const MEAL_WORDS = ["a meal.", "breakfast.", "dinner.", "a snack.", "lunch.", "dessert."];
+  const [mealIdx, setMealIdx] = useState(0);
+  const [mealFading, setMealFading] = useState(false);
+  useEffect(() => {
+    let i = 0;
+    let fadeTimer;
+    const id = setInterval(() => {
+      setMealFading(true);
+      fadeTimer = setTimeout(() => {
+        i = (i + 1) % MEAL_WORDS.length;
+        setMealIdx(i);
+        setMealFading(false);
+      }, 260);
+    }, 2200);
+    return () => {clearInterval(id);clearTimeout(fadeTimer);};
+  }, []);
+
+  const canBegin = selected !== null;
+  const selectedProfile = profiles.find((p) => p.id === selected);
+
+  const [justEnabled, setJustEnabled] = useState(false);
+  useEffect(() => {
+    if (canBegin) {
+      setJustEnabled(true);
+      const t = setTimeout(() => setJustEnabled(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [canBegin]);
+
+  const [editingProfile, setEditingProfile] = useState(null);
+  const handleAddClick = () => {
+    setEditingProfile(null);
+    setAdding(true);
+  };
+  const handleProfileCreated = (formData) => {
+    if (editingProfile) {
+      setProfiles(profiles.map(p => p.id === editingProfile.id
+        ? { ...p, name: formData.name.trim() || p.name, tag: formData.diet || p.tag, meta: formData }
+        : p));
+      setAdding(false);
+      setEditingProfile(null);
+      return;
+    }
+    const kinds = ["swirl", "wave", "knot"];
+    const id = formData.name.trim().toLowerCase().replace(/\s+/g, "-") + "-" + Math.random().toString(36).slice(2, 5);
+    const tag = formData.diet || "Custom";
+    setProfiles([...profiles, { id, name: formData.name.trim(), tag, kind: kinds[profiles.length % 3], meta: formData }]);
+    setSelected(id);
+    setAdding(false);
+  };
+
+  return (
+    <div className={state.motion === "off" ? "reduce-motion" : ""} style={{
+      minHeight: "100vh",
+      background: "rgb(244, 244, 232)",
+      color: theme.ink,
+      position: "relative",
+      overflow: "hidden",
+      transition: "background .35s ease, color .35s ease"
+    }}>
+      <AmbientNoodles theme={theme} motion={state.motion} />
+
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.05, pointerEvents: "none" }} aria-hidden>
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke={theme.ink} strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
+
+      <header style={{
+        position: "relative", zIndex: 2,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "22px 40px"
+      }}>
+        <Logo theme={theme} />
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "7px 12px", borderRadius: 999,
+            background: theme.card,
+            border: `1.5px solid ${theme.cardBorder}`,
+            fontSize: 12, fontFamily: "'Geist Mono', monospace", color: theme.ink
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: theme.accent,
+              boxShadow: `0 0 0 3px ${theme.accent}30`,
+              animation: state.motion !== "off" ? "pulse 1.6s ease-in-out infinite" : "none"
+            }} />
+            PRINTER READY · 37°C
+          </div>
+          <button style={{
+            fontSize: 13, color: theme.muted, fontFamily: "'Geist', sans-serif", fontWeight: 500
+          }}>Settings</button>
+        </div>
+      </header>
+
+      <main style={{
+        position: "relative", zIndex: 2,
+        maxWidth: 1100, margin: "0 auto",
+        padding: "24px 40px 80px",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        textAlign: "center"
+      }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "6px 12px", borderRadius: 999,
+          background: theme.tagBg, color: theme.tagInk,
+          fontFamily: "'Geist Mono', monospace",
+          fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase",
+          marginBottom: 22
+        }}>
+          <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: theme.accent }} />
+          Welcome back
+        </div>
+
+        <h1 className="serif" style={{
+          margin: 0, fontSize: "clamp(44px, 7.5vw, 92px)", lineHeight: 1.0,
+          letterSpacing: "-0.02em",
+          maxWidth: 900,
+          ...theme.headingStyle
+        }}>
+          {state.heading.split("\n").map((line, i) =>
+          <div key={i} style={{ display: "block", whiteSpace: "nowrap", color: "rgb(24, 29, 41)" }}>
+              {i === 1 ?
+            <span style={{
+              position: "relative",
+              display: "inline-block",
+              minWidth: "4.2em",
+              textAlign: "center",
+              color: "rgb(21, 60, 54)"
+            }}>
+                    <span aria-hidden style={{ visibility: "hidden", pointerEvents: "none" }}>
+                      breakfast.
+                    </span>
+                    <span style={{
+                position: "absolute", left: 0, right: 0, top: 0,
+                transition: "opacity .26s ease, transform .26s ease",
+                opacity: mealFading ? 0 : 1,
+                transform: mealFading ? "translateY(8px)" : "translateY(0)",
+                willChange: "transform, opacity"
+              }}>
+                      {MEAL_WORDS[mealIdx]}
+                    </span>
+                    <svg style={{ position: "absolute", left: "15%", bottom: "-14%", width: "70%", height: "22%", pointerEvents: "none" }} viewBox="0 0 300 30" preserveAspectRatio="none">
+                      <path d="M5,22 Q75,6 150,18 T295,14" fill="none" stroke="rgb(21, 60, 54)" strokeWidth="6" strokeLinecap="round" />
+                    </svg>
+                  </span> :
+            line}
+            </div>
+          )}
+        </h1>
+
+        <p style={{
+          marginTop: 26, maxWidth: 560,
+          fontSize: 17, lineHeight: 1.5,
+          color: theme.muted,
+          fontWeight: 400
+        }}>
+          {state.subtext}
+        </p>
+
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14,
+          marginTop: 56, marginBottom: 22,
+          color: theme.muted,
+          fontFamily: "'Geist Mono', monospace",
+          fontSize: 12, letterSpacing: ".12em", textTransform: "uppercase"
+        }}>
+          <span style={{ width: 40, height: 1, background: theme.muted, opacity: .5 }} />
+          Select your profile
+          <span style={{ width: 40, height: 1, background: theme.muted, opacity: .5 }} />
+        </div>
+
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 22,
+          justifyContent: "center",
+          maxWidth: 920
+        }}>
+          {profiles.map((p, i) =>
+          <ProfileCard
+            key={p.id}
+            profile={p}
+            idx={i}
+            theme={theme}
+            selected={selected === p.id}
+            onClick={() => setSelected(p.id)}
+            motion={state.motion} />
+          )}
+          <ProfileCard
+            profile={{ id: "__add", name: adding ? "" : "Add new", tag: adding ? "Type a name" : "New profile", type: "add" }}
+            idx={profiles.length}
+            theme={theme}
+            selected={false}
+            onClick={handleAddClick}
+            motion={state.motion} />
+        </div>
+
+        <div style={{
+          marginTop: 52,
+          display: "flex", alignItems: "center", gap: 14
+        }}>
+          <button
+            disabled={!canBegin}
+            style={{
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "20px 28px 20px 32px",
+              borderRadius: 22,
+              background: canBegin ? "rgb(21, 60, 54)" : "transparent",
+              color: canBegin ? theme.accentInk : theme.muted,
+              border: `2.5px solid ${canBegin ? theme.cardBorder : theme.muted + "55"}`,
+              boxShadow: canBegin ? `0 8px 0 ${theme.cardBorder}` : "none",
+              fontSize: 22,
+              fontFamily: "'Geist', sans-serif",
+              fontWeight: 600,
+              letterSpacing: "-0.01em",
+              cursor: canBegin ? "pointer" : "not-allowed",
+              transition: "all .2s cubic-bezier(.2,.9,.3,1.3)",
+              transform: justEnabled ? "scale(1.04)" : "scale(1)",
+              minWidth: 260,
+              justifyContent: "center"
+            }}
+            onMouseDown={(e) => {if (canBegin) e.currentTarget.style.transform = "translateY(4px)";e.currentTarget.style.boxShadow = `0 4px 0 ${theme.cardBorder}`;}}
+            onMouseUp={(e) => {if (canBegin) e.currentTarget.style.transform = "scale(1)";e.currentTarget.style.boxShadow = `0 8px 0 ${theme.cardBorder}`;}}
+            onMouseLeave={(e) => {e.currentTarget.style.transform = "scale(1)";if (canBegin) e.currentTarget.style.boxShadow = `0 8px 0 ${theme.cardBorder}`;}}>
+
+            <span>
+              {canBegin ? <>Begin with <em style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontWeight: 400, fontSize: 24 }}>{selectedProfile?.name}</em></> : "Begin"}
+            </span>
+            <svg width="26" height="26" viewBox="0 0 26 26" style={{
+              transition: "transform .2s",
+              transform: canBegin ? "translateX(0)" : "translateX(-4px)",
+              opacity: canBegin ? 1 : 0.5
+            }}>
+              <path d="M4 13 H20 M14 7 L20 13 L14 19" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <div style={{
+          marginTop: 14, height: 20,
+          fontFamily: "'Geist Mono', monospace",
+          fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase",
+          color: theme.muted
+        }}>
+          {canBegin ? "" : "Select a profile to continue"}
+        </div>
+      </main>
+
+      <TweaksPanel
+        state={state}
+        setState={setState}
+        visible={tweaksOpen}
+        onClose={() => setTweaksOpen(false)}
+        theme={theme} />
+
+      <NewProfileModal
+        visible={adding}
+        onClose={() => setAdding(false)}
+        onCreate={handleProfileCreated}
+        theme={theme} />
+    </div>);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

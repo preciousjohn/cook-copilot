@@ -44,11 +44,11 @@
   --accent: #111111;
   --accent-fg: #ffffff;
 
-  /* Header stays dark (same as landing) */
-  --header-bg: #080808;
+  /* Header */
+  --header-bg: #153C36;
   --header-border: rgba(255, 255, 255, 0.08);
-  --header-fg: rgba(240, 240, 240, 0.9);
-  --header-fg2: rgba(240, 240, 240, 0.4);
+  --header-fg: rgba(240, 240, 240, 0.95);
+  --header-fg2: rgba(240, 240, 240, 0.55);
 
   --syringe-1: #c0392b;
   --syringe-2: #2980b9;
