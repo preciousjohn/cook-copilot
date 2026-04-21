@@ -475,18 +475,6 @@ export function Step6Engineer() {
                 )}
               </div>
 
-              {/* Progress slider */}
-              <div style={{
-                padding: "8px 20px 16px",
-                display: "flex", alignItems: "center", gap: 10,
-              }}>
-                <input type="range" min={0} max={100} defaultValue={100}
-                  style={{ flex: 1, accentColor: T.ink } as React.CSSProperties} />
-                <span style={{ fontSize: 12, color: T.muted, fontFamily: "'Geist Mono', monospace",
-                  flexShrink: 0 }}>
-                  100%
-                </span>
-              </div>
             </div>
 
             {/* ── Right: controls column ── */}
