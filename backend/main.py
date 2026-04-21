@@ -24,6 +24,7 @@ from api.profiles import router as profiles_router
 from api.settings import router as settings_router
 from api.rag import router as rag_router
 from api.batch import router as batch_router
+from api.silhouettes import router as silhouettes_router
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ app.include_router(profiles_router)
 app.include_router(settings_router)
 app.include_router(rag_router)
 app.include_router(batch_router)
+app.include_router(silhouettes_router)
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────

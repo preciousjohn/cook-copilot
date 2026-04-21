@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useWizardStore } from "../../store/wizardStore";
 import { LoadingBlock } from "../ui/Spinner";
 import { Button } from "../ui/Button";
 import { RevisePanel } from "../ui/RevisePanel";
-import { runParse, runChef, runEngineer } from "../../lib/api";
+import { runParse, runChef, runEngineer, runSilhouettes } from "../../lib/api";
 import { NutritionFactsTable } from "../chef/NutritionFactsTable";
 import type { SyringeRecipe } from "../../lib/types";
 
@@ -115,47 +115,48 @@ function SyringeRecipeCardV2({ recipe }: { recipe: SyringeRecipe }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shape preview — 3 visually distinct rendering styles
+// Shape preview — 3 AI-generated variants fetched from /api/silhouettes
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SHAPE_VARIANTS = [
-  {
-    label: "Filled",
-    description: "Solid silhouette",
-    imgBg: T.cream,
-    thumbBg: T.cream,
-    imgFilter: "none",
-    thumbFilter: "none",
-    labelColor: T.muted,
-  },
-  {
-    label: "Outline",
-    description: "Hollow form",
-    // Invert: black → white; drop-shadows form a dark stroke around the shape
-    imgBg: T.ink,
-    thumbBg: T.ink,
-    imgFilter: "invert(1)",
-    thumbFilter: "invert(1)",
-    labelColor: "rgba(244,244,232,0.7)",
-  },
-  {
-    label: "Forest",
-    description: "Color tinted",
-    imgBg: T.cream,
-    thumbBg: T.cream,
-    imgFilter: "sepia(1) saturate(2.5) hue-rotate(105deg) brightness(0.6)",
-    thumbFilter: "sepia(1) saturate(2.5) hue-rotate(105deg) brightness(0.6)",
-    labelColor: T.forest,
-  },
-];
+type ShapeVariant = { label: string; description: string; b64: string | null };
 
-function ContourPreviewV2({ b64, shapeName }: { b64: string | null; shapeName: string }) {
+function ThumbSkeleton() {
+  return (
+    <div style={{
+      width: 40, height: 40, borderRadius: 6,
+      background: `linear-gradient(90deg, ${T.border} 25%, rgba(26,20,16,0.06) 50%, ${T.border} 75%)`,
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.4s ease infinite",
+    }} />
+  );
+}
+
+function ContourPreviewV2({ defaultB64, shapeName }: { defaultB64: string | null; shapeName: string }) {
   const [selected, setSelected] = useState(0);
-  const active = SHAPE_VARIANTS[selected];
+  const [variants, setVariants] = useState<ShapeVariant[]>([
+    { label: "Classic",    description: "Standard form",   b64: defaultB64 },
+    { label: "Rounded",    description: "Soft & plump",    b64: null },
+    { label: "Geometric",  description: "Angular & bold",  b64: null },
+  ]);
+  const [loading, setLoading] = useState(true);
 
   const formattedName = shapeName
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase()) + " Form";
+
+  useEffect(() => {
+    if (!shapeName) { setLoading(false); return; }
+    setLoading(true);
+    runSilhouettes(shapeName)
+      .then(({ variants: fetched }) => {
+        setVariants(fetched.map((v) => ({ label: v.label, description: v.description, b64: v.b64 })));
+      })
+      .catch(() => {/* keep defaults */})
+      .finally(() => setLoading(false));
+  }, [shapeName]);
+
+  const active = variants[selected];
+  const activeSrc = active?.b64 ? `data:image/png;base64,${active.b64}` : null;
 
   return (
     <div style={{
@@ -169,75 +170,71 @@ function ContourPreviewV2({ b64, shapeName }: { b64: string | null; shapeName: s
         </div>
         <div style={{ fontSize: 11, color: T.muted, marginTop: 2,
           fontFamily: "'Geist Mono', monospace", letterSpacing: "0.04em" }}>
-          {formattedName} · {active.label}
+          {formattedName}{active ? ` · ${active.label}` : ""}
         </div>
       </div>
 
       {/* Main image */}
       <div style={{
         flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-        overflow: "hidden", borderRadius: 10,
-        background: active.imgBg,
-        transition: "background 0.25s ease",
+        overflow: "hidden", borderRadius: 10, background: T.cream, padding: 8,
       }}>
-        {b64 ? (
+        {activeSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`data:image/png;base64,${b64}`}
-            alt={`Food silhouette — ${active.label}`}
-            style={{
-              width: "100%", maxHeight: 180, objectFit: "contain",
-              imageRendering: "pixelated",
-              transition: "filter 0.25s ease",
-              filter: active.imgFilter,
-            }}
+            src={activeSrc}
+            alt={`Food silhouette — ${active?.label}`}
+            style={{ width: "100%", maxHeight: 180, objectFit: "contain", imageRendering: "pixelated", transition: "opacity 0.2s" }}
           />
         ) : (
           <div style={{
-            width: "100%", height: 160, borderRadius: 10,
-            background: T.cream, border: `1.5px dashed ${T.border}`,
+            width: "100%", height: 160,
             display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", gap: 8, color: T.muted,
           }}>
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <ellipse cx="12" cy="14" rx="7" ry="6" />
-              <circle cx="12" cy="7" r="3" />
-              <path d="M9 7 Q7 5 8 3" strokeLinecap="round" />
-            </svg>
-            <span style={{ fontSize: 11, fontFamily: "'Geist Mono', monospace" }}>Shape preview</span>
+            {loading ? (
+              <div style={{
+                width: 80, height: 80, borderRadius: 8,
+                background: `linear-gradient(90deg, ${T.border} 25%, rgba(26,20,16,0.06) 50%, ${T.border} 75%)`,
+                backgroundSize: "200% 100%", animation: "shimmer 1.4s ease infinite",
+              }} />
+            ) : (
+              <>
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <ellipse cx="12" cy="14" rx="7" ry="6" /><circle cx="12" cy="7" r="3" />
+                </svg>
+                <span style={{ fontSize: 11, fontFamily: "'Geist Mono', monospace" }}>No shape</span>
+              </>
+            )}
           </div>
         )}
       </div>
 
       {/* Thumbnail row */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        {SHAPE_VARIANTS.map((v, idx) => (
-          <button key={idx} onClick={() => setSelected(idx)} title={v.label}
+        {variants.map((v, idx) => (
+          <button key={idx} onClick={() => v.b64 && setSelected(idx)}
+            title={v.description}
             style={{
-              width: 72, height: 72, borderRadius: 10, cursor: "pointer",
+              width: 72, height: 72, borderRadius: 10,
+              cursor: v.b64 ? "pointer" : "default",
               border: selected === idx ? `2px solid ${T.forest}` : `1.5px solid ${T.border}`,
-              background: v.thumbBg,
+              background: T.cream,
               padding: 6, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 3,
+              alignItems: "center", justifyContent: "center", gap: 4,
               transition: "border 0.15s",
               overflow: "hidden",
             }}>
-            {b64 ? (
+            {v.b64 ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={`data:image/png;base64,${b64}`} alt={v.label}
-                style={{
-                  width: 40, height: 40, objectFit: "contain",
-                  imageRendering: "pixelated",
-                  filter: v.thumbFilter,
-                }} />
+              <img src={`data:image/png;base64,${v.b64}`} alt={v.label}
+                style={{ width: 40, height: 40, objectFit: "contain", imageRendering: "pixelated" }} />
             ) : (
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
-                stroke={idx === 1 ? T.cream : T.muted} strokeWidth="1.5">
-                <ellipse cx="12" cy="15" rx="6" ry="5" /><circle cx="12" cy="8" r="2.5" />
-              </svg>
+              <ThumbSkeleton />
             )}
             <span style={{
-              fontSize: 9, color: v.labelColor,
+              fontSize: 9,
+              color: selected === idx ? T.forest : T.muted,
               fontWeight: selected === idx ? 700 : 400,
               fontFamily: "'Geist Mono', monospace", letterSpacing: "0.04em",
             }}>
@@ -358,7 +355,7 @@ export function Step5ChefV2() {
 
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } } @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden",
         background: "var(--bg)" }}>
@@ -401,7 +398,7 @@ export function Step5ChefV2() {
             {/* Shape preview */}
             <div style={{ flexShrink: 0, width: 260, display: "flex" }}>
               <ContourPreviewV2
-                b64={chefOutput.silhouette_image_b64}
+                defaultB64={chefOutput.silhouette_image_b64}
                 shapeName={parsedPrompt?.shape ?? ""}
               />
             </div>

@@ -95,6 +95,11 @@ export async function runChef(
   });
 }
 
+/** Generate 3 distinct silhouette variants (Classic / Rounded / Geometric) for a shape name */
+export async function runSilhouettes(shape: string): Promise<{ variants: { label: string; description: string; b64: string | null }[] }> {
+  return post("/api/silhouettes", { shape });
+}
+
 /** Run the Engineer AI stage: generates GCode from recipes */
 export async function runEngineer(
   prompt: string,
