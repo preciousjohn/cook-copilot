@@ -95,8 +95,8 @@ export async function runChef(
   });
 }
 
-/** Generate 3 distinct SVG silhouette variants for a shape name */
-export async function runSilhouettes(shape: string): Promise<{ variants: { label: string; description: string; svg: string }[] }> {
+/** Generate 3 distinct silhouette variants for a shape name (svg or b64 depending on backend) */
+export async function runSilhouettes(shape: string): Promise<{ variants: { label: string; description: string; svg?: string; b64?: string | null }[] }> {
   return post("/api/silhouettes", { shape });
 }
 

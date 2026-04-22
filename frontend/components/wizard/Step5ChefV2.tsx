@@ -120,7 +120,14 @@ function SyringeRecipeCardV2({ recipe }: { recipe: SyringeRecipe }) {
 // Resolution-independent — renders crisp at any size.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ShapeVariant = { label: string; description: string; svg: string | null };
+// imgSrc is a normalized data URL that works for both SVG (new backend) and PNG base64 (old backend)
+type ShapeVariant = { label: string; description: string; imgSrc: string | null; rawSvg: string | null };
+
+function toImgSrc(v: { svg?: string; b64?: string | null }): string | null {
+  if (v.svg) return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(v.svg)}`;
+  if (v.b64) return `data:image/png;base64,${v.b64}`;
+  return null;
+}
 
 const SKELETON_BG = `linear-gradient(90deg, #e8e3db 25%, #f0ece4 50%, #e8e3db 75%)`;
 
@@ -134,10 +141,11 @@ function ShimmerBlock({ width, height, radius = 8 }: { width: number | string; h
   );
 }
 
-function SvgDisplay({ svg, size }: { svg: string; size: number }) {
-  const html = svg.replace("<svg", `<svg style="width:${size}px;height:${size}px"`);
-  return <div dangerouslySetInnerHTML={{ __html: html }} />;
-}
+const EMPTY_VARIANTS: ShapeVariant[] = [
+  { label: "Classic",   description: "Standard form",    imgSrc: null, rawSvg: null },
+  { label: "Alternate", description: "Different design", imgSrc: null, rawSvg: null },
+  { label: "Stylized",  description: "Unique take",      imgSrc: null, rawSvg: null },
+];
 
 function ContourPreviewV2({
   shapeName,
@@ -149,11 +157,7 @@ function ContourPreviewV2({
   onSelectSvg?: (svg: string) => void;
 }) {
   const [selected, setSelected] = useState(0);
-  const [variants, setVariants] = useState<ShapeVariant[]>([
-    { label: "Classic",   description: "Standard form",   svg: null },
-    { label: "Alternate", description: "Different design", svg: null },
-    { label: "Stylized",  description: "Unique take",     svg: null },
-  ]);
+  const [variants, setVariants] = useState<ShapeVariant[]>(EMPTY_VARIANTS);
   const [fetching, setFetching] = useState(!!shapeName);
 
   const displayName = shapeName
@@ -164,18 +168,22 @@ function ContourPreviewV2({
     if (!shapeName) { setFetching(false); return; }
     setFetching(true);
     setSelected(0);
-    setVariants([
-      { label: "Classic",   description: "Standard form",    svg: null },
-      { label: "Alternate", description: "Different design", svg: null },
-      { label: "Stylized",  description: "Unique take",      svg: null },
-    ]);
+    setVariants(EMPTY_VARIANTS);
     runSilhouettes(shapeName)
       .then(({ variants: fetched }) => {
-        const updated = fetched.map((v) => ({ label: v.label, description: v.description, svg: v.svg }));
+        const updated: ShapeVariant[] = fetched.map((v) => ({
+          label: v.label,
+          description: v.description,
+          imgSrc: toImgSrc(v),
+          rawSvg: v.svg ?? null,
+        }));
         setVariants(updated);
-        if (updated[0]?.svg) onSelectSvg?.(updated[0].svg);
+        // Pass raw SVG or imgSrc for engineer handoff
+        const first = updated[0];
+        if (first?.rawSvg) onSelectSvg?.(first.rawSvg);
+        else if (first?.imgSrc) onSelectSvg?.(first.imgSrc);
       })
-      .catch(() => {})
+      .catch((err) => console.error("[ContourPreview] fetch failed:", err))
       .finally(() => setFetching(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shapeName]);
@@ -184,13 +192,10 @@ function ContourPreviewV2({
 
   return (
     <div style={{
-      background: T.card,
-      border: `1.5px solid ${T.border}`,
-      borderRadius: 16,
-      padding: "18px 20px 16px",
+      background: T.card, border: `1.5px solid ${T.border}`,
+      borderRadius: 16, padding: "18px 20px 16px",
       display: "flex", flexDirection: "column", gap: 14,
-      height: "100%", boxSizing: "border-box",
-      overflow: "hidden",
+      height: "100%", boxSizing: "border-box", overflow: "hidden",
     }}>
 
       {/* Header */}
@@ -206,18 +211,20 @@ function ContourPreviewV2({
 
       {/* Main preview */}
       <div style={{
-        flex: 1, minHeight: 160,
-        borderRadius: 10,
-        background: T.cream,
+        flex: 1, minHeight: 160, borderRadius: 10, background: T.cream,
         display: "flex", alignItems: "center", justifyContent: "center",
         overflow: "hidden", padding: 16, position: "relative",
       }}>
-        {fetching && !active?.svg ? (
+        {fetching ? (
           <ShimmerBlock width={140} height={140} radius={12} />
-        ) : active?.svg ? (
-          <div key={`${selected}-${active.svg.length}`} style={{ animation: "fadeIn 0.2s ease" }}>
-            <SvgDisplay svg={active.svg} size={160} />
-          </div>
+        ) : active?.imgSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${selected}-${active.imgSrc.length}`}
+            src={active.imgSrc}
+            alt={`${displayName} — ${active.label}`}
+            style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain", animation: "fadeIn 0.2s ease" }}
+          />
         ) : (
           <div style={{ textAlign: "center", color: "#BBBBBB" }}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
@@ -234,23 +241,21 @@ function ContourPreviewV2({
         {variants.map((v, idx) => {
           const isActive = selected === idx;
           return (
-            <button
-              key={idx}
+            <button key={idx}
               onClick={() => {
                 setSelected(idx);
                 onSelect?.();
-                if (v.svg) onSelectSvg?.(v.svg);
+                if (v.rawSvg) onSelectSvg?.(v.rawSvg);
+                else if (v.imgSrc) onSelectSvg?.(v.imgSrc);
               }}
               style={{
                 flex: 1, minWidth: 0,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                padding: "10px 6px",
-                borderRadius: 12,
+                padding: "10px 6px", borderRadius: 12,
                 border: isActive ? `1.5px solid rgba(21,60,54,0.35)` : `1.5px solid ${T.border}`,
                 background: isActive ? "rgba(21,60,54,0.07)" : T.cream,
-                cursor: "pointer",
+                cursor: "pointer", outline: "none",
                 transition: "border-color 0.15s, background 0.15s",
-                outline: "none",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -266,8 +271,9 @@ function ContourPreviewV2({
               }}
             >
               <div style={{ width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {v.svg ? (
-                  <SvgDisplay svg={v.svg} size={44} />
+                {v.imgSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={v.imgSrc} alt={v.label} width={44} height={44} style={{ objectFit: "contain" }} />
                 ) : (
                   <ShimmerBlock width={44} height={44} radius={8} />
                 )}
