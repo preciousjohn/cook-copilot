@@ -1,8 +1,8 @@
 """
 POST /api/silhouettes — Generate 3 distinct SVG shape variants via Claude.
 
-Uses a single Claude call (much faster than DALL-E) to return three clean
-solid-black silhouettes suitable for 3D food printing cookie-cutter paths.
+Single LLM call returns all three variants as inline SVG (~2-4s vs ~15-20s for DALL-E).
+SVG is resolution-independent so it scales to any display size with no quality loss.
 """
 from __future__ import annotations
 
@@ -36,24 +36,29 @@ class SilhouettesResponse(BaseModel):
 
 _SYSTEM = """You are a shape designer for 3D printed food molds. Generate exactly 3 distinct SVG silhouette variants for the requested shape.
 
-Rules:
-- All 3 variants must be recognizably the same subject — same animal/object — just different poses or proportions
-- Variant 1 (Upright): standard front-facing or three-quarter pose, faithful proportions
-- Variant 2 (Profile): strict left-facing side-profile pose, clearly distinct silhouette from variant 1
-- Variant 3 (Compact): same front pose as variant 1 but rounder, chunkier proportions — cuter/squatter version
-- SVG viewBox must be "0 0 100 100"
-- Use ONLY <path> elements with fill="black". No strokes, no gradients, no text, no <g> groups, no other elements
-- Paths must be fully closed (end with Z). No open paths
-- No ultra-thin parts narrower than 3 units — shapes must be printable
-- Center the shape within the viewBox with reasonable padding (10 units on each side)
-- Return ONLY valid JSON — absolutely no markdown, no code fences, no explanation
+VARIETY RULES — the 3 variants must look clearly different from each other:
+- For geometric/abstract shapes (star, heart, diamond, arrow...):
+    Vary the design significantly: e.g. a 5-point star, a 6-point star, and a rounded/puffy star
+- For animals or organic shapes (chick, duck, rabbit...):
+    Vary pose and proportion: e.g. side-profile walking, upright front-facing, compact rounded body
+- For food shapes (cookie, cupcake, pizza...):
+    Vary the style: e.g. classic shape, overhead view, stylized/simplified version
+- All 3 must be instantly recognizable as the same type of object
+- Do NOT just rotate or slightly scale the same path — they must be genuinely different outlines
 
-JSON structure (return exactly this):
+SVG RULES:
+- viewBox must be "0 0 100 100"
+- Use ONLY <path> elements with fill="black" — no strokes, no gradients, no text, no <g> wrappers
+- All paths must be closed (end with Z)
+- No part narrower than 3 units — shapes must survive 3D printing
+- Center the shape with ~10 units padding on each side
+
+Return ONLY valid JSON — no markdown, no code fences, no explanation:
 {
   "variants": [
-    {"label": "Upright", "description": "Standing front-facing pose", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
-    {"label": "Profile", "description": "Side view walking pose", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
-    {"label": "Compact", "description": "Rounded compact form", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"}
+    {"label": "Classic",    "description": "...", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
+    {"label": "Alternate",  "description": "...", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
+    {"label": "Stylized",   "description": "...", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"}
   ]
 }"""
 
@@ -63,10 +68,9 @@ def _generate(shape: str) -> SilhouettesResponse:
         model="claude-sonnet-4-6",
         max_tokens=4000,
         system=_SYSTEM,
-        messages=[{"role": "user", "content": f"Generate 3 silhouette variants for: {shape}"}],
+        messages=[{"role": "user", "content": f"Generate 3 distinct silhouette variants for: {shape}"}],
     )
     raw = "".join(b.text for b in message.content if hasattr(b, "text")).strip()
-    # Strip markdown fences if present despite instructions
     raw = re.sub(r"^```[a-z]*\n?", "", raw, flags=re.MULTILINE)
     raw = re.sub(r"```\s*$", "", raw, flags=re.MULTILINE).strip()
     data = json.loads(raw)
