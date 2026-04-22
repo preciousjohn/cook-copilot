@@ -62,7 +62,7 @@ function EditIcon() {
 
 // ─── Edit Profile Modal ───────────────────────────────────────────────────────
 
-function EditProfileModal({
+export function EditProfileModal({
   profile,
   onClose,
   onSave,

@@ -17,7 +17,7 @@ const GOAL_LABELS: Record<string, string> = {
   gain: "Gain weight",
 };
 
-export function ProfileSidebar({ profile }: { profile: UserProfile }) {
+export function ProfileSidebar({ profile, onEdit }: { profile: UserProfile; onEdit?: () => void }) {
   const sections: { label: string; value: string }[] = [
     { label: "Sex", value: profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1) },
     { label: "Age", value: `${profile.age} yrs` },
@@ -46,17 +46,30 @@ export function ProfileSidebar({ profile }: { profile: UserProfile }) {
         gap: "0",
       }}
     >
-      {/* Name */}
-      <div
-        style={{
-          fontSize: "15px",
-          fontWeight: 700,
-          color: "var(--fg)",
-          marginBottom: "16px",
-          wordBreak: "break-word",
-        }}
-      >
-        {profile.profileName}
+      {/* Name row with edit icon */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+        <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--fg)", wordBreak: "break-word" }}>
+          {profile.profileName}
+        </div>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            title="Edit profile"
+            style={{
+              width: 28, height: 28, borderRadius: 7, border: "1px solid rgba(26,20,16,0.1)",
+              background: "transparent", cursor: "pointer", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#6B5D50", transition: "background .12s, color .12s",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(26,20,16,0.06)"; (e.currentTarget as HTMLElement).style.color = "#1A1410"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#6B5D50"; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Basic info rows */}

@@ -454,14 +454,46 @@ export function Step6Engineer() {
           maxWidth: 1240, margin: "0 auto", width: "100%",
         }}>
 
-          {/* Page title */}
-          <h2 style={{
-            margin: 0, fontSize: 36, fontWeight: 400,
-            color: T.ink, fontFamily: "'Instrument Serif', serif",
-            letterSpacing: "-0.01em", lineHeight: 1.1,
-          }}>
-            Printing Details
-          </h2>
+          {/* Page title + Regenerate */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h2 style={{
+              margin: 0, fontSize: 36, fontWeight: 400,
+              color: T.ink, fontFamily: "'Instrument Serif', serif",
+              letterSpacing: "-0.01em", lineHeight: 1.1,
+            }}>
+              Printing Details
+            </h2>
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating || !g}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "10px 20px", borderRadius: 12,
+                border: `1.5px solid ${T.border}`,
+                background: "transparent", color: T.ink,
+                fontSize: 14, fontWeight: 500, cursor: regenerating ? "not-allowed" : "pointer",
+                fontFamily: "'Geist', sans-serif", opacity: regenerating ? 0.85 : 1,
+                transition: "background 0.12s",
+                minWidth: regenerating ? 220 : undefined,
+              }}
+              onMouseEnter={(e) => { if (!regenerating) (e.currentTarget as HTMLElement).style.background = T.cream; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              {regenerating ? (
+                <>
+                  <Dots />
+                  <span style={{ opacity: regenFade ? 1 : 0, transition: "opacity 0.22s ease" }}>
+                    {REGEN_MSGS[regenMsgIndex]}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <RefreshIcon />
+                  Regenerate G-code
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Main two-column layout */}
           <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
@@ -711,10 +743,9 @@ export function Step6Engineer() {
           flexShrink: 0, background: T.card,
           borderTop: `1.5px solid ${T.border}`,
           padding: "14px 28px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10,
         }}>
-          {/* Left: Previous + Regenerate */}
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {/* Previous + Download */}
           <button
             onClick={() => goToStep(5)}
             style={{
@@ -731,38 +762,6 @@ export function Step6Engineer() {
           >
             ← Previous
           </button>
-          {/* Regenerate */}
-          <button
-            onClick={handleRegenerate}
-            disabled={regenerating || !g}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 20px", borderRadius: 12,
-              border: `1.5px solid ${T.border}`,
-              background: "transparent", color: T.ink,
-              fontSize: 14, fontWeight: 500, cursor: regenerating ? "not-allowed" : "pointer",
-              fontFamily: "'Geist', sans-serif", opacity: regenerating ? 0.85 : 1,
-              transition: "background 0.12s",
-              minWidth: regenerating ? 220 : undefined,
-            }}
-            onMouseEnter={(e) => { if (!regenerating) (e.currentTarget as HTMLElement).style.background = T.cream; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >
-            {regenerating ? (
-              <>
-                <Dots />
-                <span style={{ opacity: regenFade ? 1 : 0, transition: "opacity 0.22s ease" }}>
-                  {REGEN_MSGS[regenMsgIndex]}
-                </span>
-              </>
-            ) : (
-              <>
-                <RefreshIcon />
-                Regenerate G-code
-              </>
-            )}
-          </button>
-          </div>
 
           {/* Download */}
           <button

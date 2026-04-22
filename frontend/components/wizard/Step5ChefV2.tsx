@@ -240,8 +240,8 @@ function ContourPreviewV2({
         )}
       </div>
 
-      {/* Form gallery */}
-      <div style={{ display: "flex", gap: 8 }}>
+      {/* Form gallery — hidden in print */}
+      <div className="print-shape-gallery" style={{ display: "flex", gap: 8 }}>
         {variants.map((v, idx) => {
           const isActive = selected === idx;
           return (
@@ -514,7 +514,20 @@ export function Step5ChefV2() {
 
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } } @keyframes shimmer { 0% { background-position: -300% 0; } 100% { background-position: 300% 0; } } @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: -300% 0; } 100% { background-position: 300% 0; } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @media print {
+          .no-print { display: none !important; }
+          .print-recipe-wrap { padding: 24px !important; overflow: visible !important; max-width: 100% !important; }
+          .print-cards-row { flex-wrap: wrap !important; }
+          .print-shape-panel { width: 220px !important; flex-shrink: 0; }
+          .print-shape-gallery { display: none !important; }
+          .print-nutrition-facts { display: none !important; }
+        }
+      `}</style>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden",
         background: T.cream }}>
@@ -539,21 +552,23 @@ export function Step5ChefV2() {
               {chefOutput.menu_name}
             </h2>
 
-            <TitleIconButton
-              onClick={handleBookmark}
-              tooltip={saved ? "Unsave recipe" : "Save recipe"}
-              active={saved}
-            >
-              <BookmarkIcon filled={saved} />
-            </TitleIconButton>
+            <span className="no-print" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <TitleIconButton
+                onClick={handleBookmark}
+                tooltip={saved ? "Unsave recipe" : "Save recipe"}
+                active={saved}
+              >
+                <BookmarkIcon filled={saved} />
+              </TitleIconButton>
 
-            <TitleIconButton onClick={() => window.print()} tooltip="Download recipe PDF">
-              <DownloadIcon />
-            </TitleIconButton>
+              <TitleIconButton onClick={() => window.print()} tooltip="Download recipe PDF">
+                <DownloadIcon />
+              </TitleIconButton>
+            </span>
           </div>
 
-          {/* 4-column row */}
-          <div style={{ display: "flex", gap: 16, alignItems: "stretch" }}>
+          {/* Syringe cards + shape preview (printed) */}
+          <div className="print-cards-row" style={{ display: "flex", gap: 16, alignItems: "stretch" }}>
             {/* Recipe cards */}
             <div style={{
               flex: 1, minWidth: 0, display: "grid",
@@ -566,7 +581,7 @@ export function Step5ChefV2() {
             </div>
 
             {/* Shape preview */}
-            <div style={{ flexShrink: 0, width: 260, display: "flex" }}>
+            <div className="print-shape-panel" style={{ flexShrink: 0, width: 260, display: "flex" }}>
               <ContourPreviewV2
                 shapeName={parsedPrompt?.shape ?? ""}
                 onSelect={() => setHasInteracted(true)}
@@ -574,17 +589,17 @@ export function Step5ChefV2() {
               />
             </div>
 
-            {/* Nutrition facts */}
+            {/* Nutrition facts — hidden in print */}
             {chefOutput.nutrition_facts && (
-              <div style={{ flexShrink: 0, display: "flex" }}>
+              <div className="no-print" style={{ flexShrink: 0, display: "flex" }}>
                 <NutritionFactsTable facts={chefOutput.nutrition_facts} />
               </div>
             )}
           </div>
 
-          {/* Post-processing */}
+          {/* Post-processing — hidden in print */}
           {chefOutput.post_processing?.length > 0 && (
-            <div style={{
+            <div className="no-print" style={{
               padding: "14px 18px", borderRadius: 14,
               background: T.card, border: `1.5px solid ${T.border}`,
             }}>
@@ -600,8 +615,8 @@ export function Step5ChefV2() {
             </div>
           )}
 
-          {/* ── Feedback section ── */}
-          <div>
+          {/* ── Feedback section — hidden in print ── */}
+          <div className="no-print">
             {/* Heading + pill toggles row */}
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
               <h3 style={{
@@ -610,7 +625,7 @@ export function Step5ChefV2() {
                 fontWeight: 400, color: T.ink,
                 letterSpacing: "-0.01em",
               }}>
-                Feedback
+                Refine
               </h3>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["recipe", "shape"] as ReviseKind[]).map((kind) => {
@@ -632,7 +647,7 @@ export function Step5ChefV2() {
                         transition: "background 0.15s, border-color 0.15s, color 0.15s",
                       }}
                     >
-                      {kind === "recipe" ? "Recipe feedback" : "Shape feedback"}
+                      {kind === "recipe" ? "Recipe" : "Shape"}
                     </button>
                   );
                 })}
@@ -816,9 +831,9 @@ export function Step5ChefV2() {
             </div>
           )}
 
-          {/* KB chunks */}
+          {/* KB chunks — hidden in print */}
           {chefOutput.retrieved_chunks && chefOutput.retrieved_chunks.length > 0 && (
-            <details>
+            <details className="no-print">
               <summary style={{
                 cursor: "pointer", fontSize: 12, fontWeight: 600, color: T.muted,
                 userSelect: "none", marginBottom: 8,
@@ -848,21 +863,17 @@ export function Step5ChefV2() {
         </div>
 
         {/* Bottom bar */}
-        <div style={{
+        <div className="no-print" style={{
           flexShrink: 0, background: T.card,
           borderTop: `1.5px solid ${T.border}`,
           padding: "14px 28px",
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10,
         }}>
-          {/* Left: Previous */}
-          <div style={{ display: "flex", gap: 10 }}>
+          {/* Previous + Confirm */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Button variant="secondary" size="md" onClick={() => goToStep(4)} disabled={isLoading}>
               ← Previous
             </Button>
-          </div>
-
-          {/* Right: Confirm */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Button
               variant="primary"
               size="md"
