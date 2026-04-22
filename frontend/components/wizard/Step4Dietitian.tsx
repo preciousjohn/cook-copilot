@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWizardStore } from "../../store/wizardStore";
 import { Button } from "../ui/Button";
-import { LoadingBlock } from "../ui/Spinner";
+import { StageLoader } from "../ui/StageLoader";
 import { RevisePanel } from "../ui/RevisePanel";
 import { runDietitian, runChef } from "../../lib/api";
 import { NutritionTargetCard } from "../dietitian/NutritionTargetCard";
@@ -119,7 +119,7 @@ export function Step4Dietitian() {
   if (!dietitianOutput && stepLoading.dietitian) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <LoadingBlock label="Calculating nutrition targets..." />
+        <StageLoader stage="dietitian" />
       </div>
     );
   }
@@ -238,8 +238,11 @@ export function Step4Dietitian() {
             gap: "10px",
           }}
         >
+          <Button variant="secondary" size="md" onClick={() => goToStep(3)} disabled={isLoading}>
+            ← Previous
+          </Button>
           <p style={{ margin: 0, fontSize: "13px", color: "var(--fg3)", flex: 1 }}>
-            Review the nutrition targets above, then confirm to generate your recipe.
+            Review the nutrition targets, then confirm to generate your recipe.
           </p>
           <Button variant="secondary" size="md" onClick={() => setShowRevise(true)} disabled={isLoading}>
             Feedback
@@ -248,6 +251,13 @@ export function Step4Dietitian() {
             variant="primary"
             size="md"
             loading={stepLoading.chef}
+            loadingMessages={[
+              "Designing your recipe…",
+              "Balancing the ingredients…",
+              "Crafting the perfect blend…",
+              "Assigning syringe layers…",
+              "Almost there…",
+            ]}
             disabled={isLoading}
             onClick={handleConfirm}
           >
