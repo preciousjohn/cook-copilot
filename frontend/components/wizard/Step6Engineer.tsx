@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useWizardStore } from "../../store/wizardStore";
-import { LoadingBlock } from "../ui/Spinner";
+import { StageLoader } from "../ui/StageLoader";
 import { regenerateGCode, runEngineer } from "../../lib/api";
 import { formatPrintTime } from "../../lib/formatters";
 import { GCodeCanvas, SYRINGE_COLORS } from "../engineer/GCodeCanvas";
@@ -25,6 +25,28 @@ const T = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Micro-components
 // ─────────────────────────────────────────────────────────────────────────────
+
+const REGEN_MSGS = [
+  "Regenerating print paths…",
+  "Applying your settings…",
+  "Optimizing layer data…",
+  "Building new G-code…",
+  "Almost done…",
+];
+
+function Dots() {
+  return (
+    <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+      {[0, 1, 2].map((i) => (
+        <span key={i} style={{
+          width: 4, height: 4, borderRadius: "50%",
+          background: "currentColor", display: "inline-block",
+          animation: `regenDot 1.1s ease-in-out ${i * 0.18}s infinite`,
+        }} />
+      ))}
+    </span>
+  );
+}
 
 function SyringeIcon() {
   return (
@@ -335,7 +357,7 @@ export function Step6Engineer() {
     gcode, setGcode, setEngineerOutput,
     emValues, lhValue, setEmValues, setLhValue,
     setStepLoading, setStepError, stepLoading, stepError,
-    appendLog,
+    appendLog, goToStep,
   } = useWizardStore();
 
   const [regenerating, setRegenerating] = useState(false);
@@ -344,6 +366,17 @@ export function Step6Engineer() {
   const [calTool, setCalTool] = useState(0);
   const [calEM, setCalEM] = useState(0.1);
   const [calLH, setCalLH] = useState(0.1);
+  const [regenMsgIndex, setRegenMsgIndex] = useState(0);
+  const [regenFade, setRegenFade] = useState(true);
+
+  useEffect(() => {
+    if (!regenerating) { setRegenMsgIndex(0); setRegenFade(true); return; }
+    const interval = setInterval(() => {
+      setRegenFade(false);
+      setTimeout(() => { setRegenMsgIndex((i) => (i + 1) % REGEN_MSGS.length); setRegenFade(true); }, 220);
+    }, 2600);
+    return () => clearInterval(interval);
+  }, [regenerating]);
 
   const g = gcode || engineerOutput?.gcode || "";
   const meta = engineerOutput?.metadata;
@@ -397,7 +430,7 @@ export function Step6Engineer() {
   if (!engineerOutput && stepLoading.engineer) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <LoadingBlock label="Generating G-code..." />
+        <StageLoader stage="engineer" />
       </div>
     );
   }
@@ -405,7 +438,7 @@ export function Step6Engineer() {
 
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes fadeIn { from { opacity:0; } to { opacity:1; } } @keyframes regenDot { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-4px); opacity: 1; } }`}</style>
 
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden",
@@ -680,6 +713,24 @@ export function Step6Engineer() {
           padding: "14px 28px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
+          {/* Left: Previous + Regenerate */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            onClick={() => goToStep(5)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "10px 18px", borderRadius: 12,
+              border: `1.5px solid ${T.border}`,
+              background: "transparent", color: T.muted,
+              fontSize: 14, fontWeight: 500, cursor: "pointer",
+              fontFamily: "'Geist', sans-serif",
+              transition: "background 0.12s",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = T.cream; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            ← Previous
+          </button>
           {/* Regenerate */}
           <button
             onClick={handleRegenerate}
@@ -690,17 +741,28 @@ export function Step6Engineer() {
               border: `1.5px solid ${T.border}`,
               background: "transparent", color: T.ink,
               fontSize: 14, fontWeight: 500, cursor: regenerating ? "not-allowed" : "pointer",
-              fontFamily: "'Geist', sans-serif", opacity: regenerating ? 0.6 : 1,
+              fontFamily: "'Geist', sans-serif", opacity: regenerating ? 0.85 : 1,
               transition: "background 0.12s",
+              minWidth: regenerating ? 220 : undefined,
             }}
             onMouseEnter={(e) => { if (!regenerating) (e.currentTarget as HTMLElement).style.background = T.cream; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
-            <span style={{ animation: regenerating ? "spin 0.8s linear infinite" : "none", display: "flex" }}>
-              <RefreshIcon />
-            </span>
-            {regenerating ? "Regenerating…" : "Regenerate G-code"}
+            {regenerating ? (
+              <>
+                <Dots />
+                <span style={{ opacity: regenFade ? 1 : 0, transition: "opacity 0.22s ease" }}>
+                  {REGEN_MSGS[regenMsgIndex]}
+                </span>
+              </>
+            ) : (
+              <>
+                <RefreshIcon />
+                Regenerate G-code
+              </>
+            )}
           </button>
+          </div>
 
           {/* Download */}
           <button

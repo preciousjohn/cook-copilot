@@ -33,3 +33,6 @@ pydantic-settings>=2.0.0
 usda-fdc>=0.1.0
 # --- Nutrition LP optimizer ---
 scipy>=1.11.0
+# --- Image processing (silhouette / G-code path tracing) ---
+opencv-python-headless>=4.8.0
+numpy>=1.24.0

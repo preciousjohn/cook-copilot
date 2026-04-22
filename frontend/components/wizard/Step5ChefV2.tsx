@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useWizardStore } from "../../store/wizardStore";
-import { LoadingBlock } from "../ui/Spinner";
 import { Button } from "../ui/Button";
+import { StageLoader } from "../ui/StageLoader";
 import { runParse, runChef, runEngineer, runSilhouettes } from "../../lib/api";
 import { NutritionFactsTable } from "../chef/NutritionFactsTable";
+import { saveRecipe, isRecipeSaved, unsaveRecipe } from "../../lib/savedRecipes";
 import type { SyringeRecipe } from "../../lib/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,21 +30,25 @@ const T = {
 // Shared micro-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BookmarkIcon() {
+function BookmarkIcon({ filled }: { filled?: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke={T.muted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24"
+      fill={filled ? T.forest : "none"}
+      stroke={filled ? T.forest : T.muted}
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      style={{ transition: "fill .2s, stroke .2s" }}>
       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
 
-function Spinner() {
+function DownloadIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 20 20"
-      style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}>
-      <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
-      <path d="M10 2 A8 8 0 0 1 18 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   );
 }
@@ -293,6 +298,57 @@ function ContourPreviewV2({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TitleIconButton — icon button with tooltip below (for title row)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TitleIconButton({
+  onClick,
+  tooltip,
+  active,
+  children,
+}: {
+  onClick: () => void;
+  tooltip: string;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          background: active ? "rgba(21,60,54,0.08)" : hovered ? "rgba(26,20,16,0.05)" : "transparent",
+          border: `1px solid ${active ? "rgba(21,60,54,0.2)" : "rgba(26,20,16,0.12)"}`,
+          cursor: "pointer", borderRadius: 8, padding: 6,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: active ? T.forest : T.muted,
+          transition: "background .15s, color .15s, border-color .15s",
+        }}
+      >
+        {children}
+      </button>
+      {hovered && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 7px)", left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(26,20,16,0.88)", color: "#FFF4E6",
+          fontSize: 11, fontWeight: 500, padding: "4px 10px",
+          borderRadius: 6, whiteSpace: "nowrap",
+          pointerEvents: "none", zIndex: 200,
+          fontFamily: "'Geist', sans-serif",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        }}>
+          {tooltip}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -312,12 +368,33 @@ export function Step5ChefV2() {
   const [feedbackText, setFeedbackText] = useState("");
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedSvg, setSelectedSvg] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   // alias for existing handlers that reference showRevise
   const showRevise = feedbackKind;
 
   const isLoading = stepLoading.chef || stepLoading.engineer;
   const error = stepError.engineer;
+
+
+  // Check if already saved when output loads
+  useEffect(() => {
+    if (chefOutput && profile) {
+      setSaved(isRecipeSaved(chefOutput.menu_name, profile.profileName));
+    }
+  }, [chefOutput, profile]);
+
+  function handleBookmark() {
+    if (!chefOutput || !profile) return;
+    if (saved) {
+      unsaveRecipe(chefOutput.menu_name, profile.profileName);
+      setSaved(false);
+    } else {
+      saveRecipe({ name: chefOutput.menu_name, profileName: profile.profileName, prompt, chefOutput });
+      setSaved(true);
+    }
+  }
+
 
   function svgToB64(svg: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -426,7 +503,7 @@ export function Step5ChefV2() {
   if (!chefOutput && stepLoading.chef) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <LoadingBlock label="Designing your recipe..." />
+        <StageLoader stage="chef" />
       </div>
     );
   }
@@ -458,7 +535,18 @@ export function Step5ChefV2() {
             }}>
               {chefOutput.menu_name}
             </h2>
-            <BookmarkIcon />
+
+            <TitleIconButton
+              onClick={handleBookmark}
+              tooltip={saved ? "Unsave recipe" : "Save recipe"}
+              active={saved}
+            >
+              <BookmarkIcon filled={saved} />
+            </TitleIconButton>
+
+            <TitleIconButton onClick={() => window.print()} tooltip="Download recipe PDF">
+              <DownloadIcon />
+            </TitleIconButton>
           </div>
 
           {/* 4-column row */}
@@ -719,30 +807,65 @@ export function Step5ChefV2() {
           flexShrink: 0, background: T.card,
           borderTop: `1.5px solid ${T.border}`,
           padding: "14px 28px",
-          display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         }}>
-          {!hasInteracted && (
-            <p style={{ margin: 0, fontSize: 12, color: T.muted, fontFamily: "'Geist', sans-serif" }}>
-              Select a form or submit feedback to activate
-            </p>
-          )}
-          <Button
-            variant="primary"
-            size="md"
-            loading={stepLoading.engineer}
-            disabled={isLoading || (!hasInteracted && !stepLoading.engineer)}
-            onClick={handleConfirm}
-            style={{
-              background: hasInteracted && !isLoading ? T.forest : undefined,
-              borderColor: hasInteracted && !isLoading ? T.forest : undefined,
-              color: hasInteracted && !isLoading ? T.forestInk : undefined,
-              borderRadius: 12, fontWeight: 600, padding: "11px 24px",
-              opacity: hasInteracted || stepLoading.engineer ? 1 : 0.45,
-              transition: "opacity 0.2s, background 0.2s",
-            }}
-          >
-            {stepLoading.engineer ? "Generating…" : "Confirm →"}
-          </Button>
+          {/* Left: Previous + feedback buttons */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <Button variant="secondary" size="md" onClick={() => goToStep(4)} disabled={isLoading}>
+              ← Previous
+            </Button>
+            {!showRevise ? (
+              <>
+                <Button variant="secondary" size="md"
+                  onClick={() => setShowRevise("recipe")} disabled={isLoading}>
+                  Recipe feedback
+                </Button>
+                <Button variant="secondary" size="md"
+                  onClick={() => setShowRevise("shape")} disabled={isLoading}>
+                  Shape feedback
+                </Button>
+              </>
+            ) : (
+              <span style={{ fontSize: 13, color: T.muted, fontFamily: "'Geist', sans-serif", alignSelf: "center" }}>
+                Submit or cancel feedback above to continue.
+              </span>
+            )}
+          </div>
+
+          {/* Right: Confirm */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {!hasInteracted && !showRevise && (
+              <p style={{ margin: 0, fontSize: 12, color: T.muted, fontFamily: "'Geist', sans-serif" }}>
+                Select a form or edit the recipe to activate
+              </p>
+            )}
+            <Button
+              variant="primary"
+              size="md"
+              loading={stepLoading.engineer}
+              loadingMessages={[
+                "Converting to G-code…",
+                "Calculating print paths…",
+                "Slicing your food…",
+                "Mapping syringe layers…",
+                "Optimizing the toolpath…",
+              ]}
+              disabled={isLoading || (!hasInteracted && !stepLoading.engineer)}
+              onClick={handleConfirm}
+              style={{
+                background: hasInteracted && !isLoading ? T.forest : undefined,
+                borderColor: hasInteracted && !isLoading ? T.forest : undefined,
+                color: hasInteracted && !isLoading ? T.forestInk : undefined,
+                borderRadius: 12,
+                fontWeight: 600,
+                padding: "11px 24px",
+                opacity: hasInteracted || stepLoading.engineer ? 1 : 0.45,
+                transition: "opacity 0.2s, background 0.2s",
+              }}
+            >
+              Confirm →
+            </Button>
+          </div>
         </div>
       </div>
     </>

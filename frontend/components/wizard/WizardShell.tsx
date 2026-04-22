@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardStore } from "../../store/wizardStore";
 import { Step3Prompt } from "./Step3Prompt";
@@ -8,6 +8,56 @@ import { ProfileSwitcher } from "./ProfileSwitcher";
 import { Step4Dietitian } from "./Step4Dietitian";
 import { Step5ChefV2 as Step5Chef } from "./Step5ChefV2";
 import { Step6Engineer } from "./Step6Engineer";
+
+function NavIconButton({
+  onClick,
+  tooltip,
+  disabled,
+  children,
+}: {
+  onClick?: () => void;
+  tooltip: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          width: 38, height: 38, borderRadius: "50%",
+          background: hovered && !disabled ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          cursor: disabled ? "default" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: disabled ? "rgba(255,255,255,0.3)" : "var(--header-fg)",
+          transition: "background .15s, color .15s",
+          flexShrink: 0,
+        }}
+      >
+        {children}
+      </button>
+      {hovered && !disabled && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(26,20,16,0.88)", color: "#FFF4E6",
+          fontSize: 11, fontWeight: 500, padding: "5px 10px",
+          borderRadius: 6, whiteSpace: "nowrap",
+          pointerEvents: "none", zIndex: 400,
+          fontFamily: "'Geist', sans-serif",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+        }}>
+          {tooltip}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STEP_LABELS: Record<number, string> = {
   3: "Prompt",
@@ -43,6 +93,7 @@ export function WizardShell() {
 
   return (
     <div style={{ height: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <style>{`@media print { header { display: none !important; } main { overflow: visible !important; height: auto !important; } }`}</style>
       <header
         style={{
           zIndex: 100,
@@ -118,33 +169,37 @@ export function WizardShell() {
             <button
               onClick={startOver}
               style={{
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.15)",
                 cursor: "pointer", fontSize: 12, fontWeight: 500,
                 color: "var(--header-fg)",
-                padding: "5px 12px", borderRadius: 999,
+                padding: "6px 14px", borderRadius: 999,
                 transition: "background .15s",
+                fontFamily: "'Geist', sans-serif",
               }}
-              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.2)"}
-              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)"}
+              onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.18)"}
+              onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"}
             >
               Start over
             </button>
           )}
+
           <ProfileSwitcher />
-          <a
-            href="/settings"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, color: "var(--header-fg2)", textDecoration: "none", transition: "color 0.15s, background 0.15s" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--header-fg)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--header-fg2)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-            title="Settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M6 1h4M7 1v5L3.5 13.5h9L9 6V1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="6.5" cy="11" r="0.8" fill="currentColor" />
-              <circle cx="9.2" cy="9.8" r="0.55" fill="currentColor" />
+
+          {/* Saved recipes */}
+          <NavIconButton onClick={() => router.push("/saved")} tooltip="Saved recipes">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
-          </a>
+          </NavIconButton>
+
+          {/* Settings */}
+          <NavIconButton onClick={() => router.push("/settings")} tooltip="Settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </NavIconButton>
         </div>
       </header>
 

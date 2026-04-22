@@ -18,38 +18,89 @@ import { formatProfileForAPI } from "./formatters";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+// ── Friendly error translation ────────────────────────────────────────────────
+
+function friendlyError(status: number, rawText: string): string {
+  let detail = rawText;
+  try {
+    const parsed = JSON.parse(rawText);
+    if (typeof parsed?.detail === "string") detail = parsed.detail;
+    else if (Array.isArray(parsed?.detail))
+      detail = parsed.detail.map((d: { msg?: string }) => d.msg ?? d).join("; ");
+  } catch { /* not JSON */ }
+
+  const d = detail.toLowerCase();
+
+  if (d.includes("no module named"))
+    return "The server is missing a required component. Please restart the backend and try again.";
+  if (d.includes("api key") || d.includes("authentication") || status === 401 || status === 403)
+    return "The AI service isn't authorized. Please check that your API key is set in the backend .env file.";
+  if (status === 429 || d.includes("rate limit") || d.includes("quota"))
+    return "You've hit the AI rate limit. Please wait a moment and try again.";
+  if (status === 422)
+    return "Your input couldn't be processed. Try rephrasing your request.";
+  if (d.includes("timeout") || d.includes("timed out"))
+    return "The request took too long. Try again — complex recipes can take a moment.";
+  if (d.includes("image") || d.includes("dall") || d.includes("silhouette"))
+    return "Couldn't generate the shape image. You can continue and try a different shape.";
+  if (d.includes("openai") || d.includes("content_filter"))
+    return "The AI service returned an error. Try a different description and try again.";
+  if (status >= 500)
+    return "Something went wrong on our end. Please try again in a moment.";
+
+  return "Something didn't work as expected. Please try again.";
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+    throw new Error(friendlyError(res.status, text));
   }
   return res.json() as Promise<T>;
 }
 
+const networkError = () =>
+  new Error("Can't reach the server. Make sure the backend is running and try again.");
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch { throw networkError(); }
+  return handleResponse<T>(res);
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
+  let res: Response;
+  try { res = await fetch(`${BASE}${path}`); }
+  catch { throw networkError(); }
+  return handleResponse<T>(res);
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch { throw networkError(); }
+  return handleResponse<T>(res);
 }
 
 async function del(path: string): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  let res: Response;
+  try { res = await fetch(`${BASE}${path}`, { method: "DELETE" }); }
+  catch { throw networkError(); }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(friendlyError(res.status, text));
+  }
 }
 
 // ── Core pipeline endpoints ───────────────────────────────────────────────────
@@ -195,13 +246,9 @@ export async function uploadRAGSource(file: File, folder: string = ""): Promise<
   const form = new FormData();
   form.append("file", file);
   form.append("folder", folder);
-  const res = await fetch(`${BASE}/api/rag/sources/upload`, {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText}: ${text}`);
-  }
-  return res.json() as Promise<RAGSource>;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/api/rag/sources/upload`, { method: "POST", body: form });
+  } catch { throw networkError(); }
+  return handleResponse<RAGSource>(res);
 }

@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CookCopilot — AI-Powered Personalized Food Fabrication",
   description: "Multi-stage AI-assisted food fabrication pipeline by Morphing Matter Lab",
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

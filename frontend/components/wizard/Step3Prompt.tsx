@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useWizardStore } from "../../store/wizardStore";
 import { runParse, runDietitian } from "../../lib/api";
+import { Button } from "../ui/Button";
 
 const EXAMPLES = [
   "Crispy chickpea chips shaped like little stars",
@@ -13,14 +14,13 @@ const EXAMPLES = [
   "Fluffy pancake rounds with berry filling",
 ];
 
-function Spinner() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}>
-      <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
-      <path d="M10 2 A8 8 0 0 1 18 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
+const PRINT_MSGS = [
+  "Analyzing your food idea…",
+  "Checking nutrition guidelines…",
+  "Building your meal profile…",
+  "Crunching the numbers…",
+  "Almost ready…",
+];
 
 export function Step3Prompt() {
   const {
@@ -83,9 +83,7 @@ export function Step3Prompt() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
-        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
       `}</style>
 
@@ -120,13 +118,22 @@ export function Step3Prompt() {
               style={{ width: "100%", padding: "18px 20px 10px", fontSize: 16, lineHeight: 1.6, border: "none", background: "transparent", color: "rgb(24, 29, 41)", resize: "none", outline: "none", fontFamily: "'Geist', sans-serif", minHeight: 120, boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 14px 12px" }}>
-              <button
+              <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 999, background: canSubmit ? "rgb(21, 60, 54)" : "transparent", color: canSubmit ? "#FFF4E6" : "#6B5D50", border: `1.5px solid ${canSubmit ? "rgb(21,60,54)" : "#6B5D5050"}`, fontSize: 14, fontWeight: 600, cursor: canSubmit ? "pointer" : "not-allowed", fontFamily: "'Geist', sans-serif", transition: "all .15s" }}
+                loading={isLoading}
+                loadingMessages={PRINT_MSGS}
+                style={{
+                  borderRadius: 999,
+                  background: canSubmit ? "rgb(21, 60, 54)" : "transparent",
+                  color: canSubmit ? "#FFF4E6" : "#6B5D50",
+                  border: `1.5px solid ${canSubmit ? "rgb(21,60,54)" : "#6B5D5050"}`,
+                  fontSize: 14, fontWeight: 600,
+                  fontFamily: "'Geist', sans-serif",
+                }}
               >
-                {isLoading ? <><Spinner /> Analyzing…</> : "Print →"}
-              </button>
+                Print →
+              </Button>
             </div>
           </div>
 
@@ -153,16 +160,6 @@ export function Step3Prompt() {
               })}
             </div>
           </div>
-
-          {/* Loading status */}
-          {isLoading && (
-            <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", background: "#FFFFFF", border: "1.5px solid #1A141015", borderRadius: 12, animation: "fadeUp 0.3s ease both" }}>
-              <span style={{ color: "rgb(21, 60, 54)", flexShrink: 0 }}><Spinner /></span>
-              <p style={{ fontSize: 14, color: "#6B5D50", margin: 0, animation: "pulse 1.8s ease infinite" }}>
-                Creating nutrition targets for <strong style={{ color: "rgb(21,60,54)" }}>{name}</strong>…
-              </p>
-            </div>
-          )}
 
           {error && (
             <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 10, background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 13, fontFamily: "'Geist', sans-serif" }}>
