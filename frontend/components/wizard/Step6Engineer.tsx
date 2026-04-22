@@ -340,6 +340,7 @@ export function Step6Engineer() {
 
   const [regenerating, setRegenerating] = useState(false);
   const [gcodeVersion, setGcodeVersion] = useState(0);
+  const [showGcode, setShowGcode] = useState(false);
   const [calTool, setCalTool] = useState(0);
   const [calEM, setCalEM] = useState(0.1);
   const [calLH, setCalLH] = useState(0.1);
@@ -430,7 +431,7 @@ export function Step6Engineer() {
           </h2>
 
           {/* Main two-column layout */}
-          <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+          <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
 
             {/* ── Left: 3D Preview card ── */}
             <div style={{
@@ -450,27 +451,92 @@ export function Step6Engineer() {
                   }}>
                     <SyringeIcon />
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>3D Preview</div>
                     <div style={{ fontSize: 11, color: T.muted, marginTop: 1,
                       fontFamily: "'Geist Mono', monospace" }}>
                       G-code print path
                     </div>
                   </div>
+                  {/* View G-Code toggle */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: T.muted, fontFamily: "'Geist', sans-serif" }}>
+                      View G-Code
+                    </span>
+                    <button
+                      onClick={() => setShowGcode((v) => !v)}
+                      aria-pressed={showGcode}
+                      style={{
+                        width: 40, height: 22, borderRadius: 11,
+                        border: "none", cursor: "pointer", padding: 0,
+                        background: showGcode ? T.forest : "rgba(26,20,16,0.15)",
+                        position: "relative", transition: "background 0.18s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span style={{
+                        position: "absolute", top: 3,
+                        left: showGcode ? 21 : 3,
+                        width: 16, height: 16, borderRadius: "50%",
+                        background: "#fff",
+                        transition: "left 0.18s",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      }} />
+                    </button>
+                  </div>
                 </div>
                 <div style={{ height: 1, background: T.border, marginTop: 14 }} />
               </div>
 
-              {/* Canvas */}
-              <div style={{ flex: 1, minHeight: 320, padding: "0 12px 12px", position: "relative" }}>
-                {g ? (
-                  <GCodeCanvas key={gcodeVersion} gcode={g} />
-                ) : (
+              {/* Canvas / G-code text — flex-grows to fill card, size never changes on toggle */}
+              <div style={{ flex: 1, minHeight: 320, padding: "0 12px 12px", position: "relative", boxSizing: "border-box" }}>
+                {!g ? (
                   <div style={{
-                    height: 320, display: "flex", alignItems: "center", justifyContent: "center",
+                    height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
                     color: T.muted, fontSize: 13,
                   }}>
                     No G-code generated
+                  </div>
+                ) : showGcode ? (
+                  <div style={{
+                    height: "100%", borderRadius: 10, overflow: "hidden",
+                    background: "#0d1117", position: "relative", minHeight: 0,
+                  }}>
+                    <div style={{
+                      position: "absolute", inset: 0, overflowY: "auto",
+                      padding: "10px 0",
+                      fontFamily: "'Geist Mono', 'Courier New', monospace",
+                      fontSize: 11, lineHeight: "18px",
+                    }}>
+                      {g.split("\n").map((line, i) => {
+                        const trimmed = line.trimStart();
+                        const isComment = trimmed.startsWith(";");
+                        const isCommand = /^[GMT]\d/i.test(trimmed);
+                        const lineColor = isComment
+                          ? "#6a9955"
+                          : isCommand
+                          ? "#9cdcfe"
+                          : "#d4d4d4";
+                        return (
+                          <div key={i} style={{ display: "flex", minHeight: 18 }}>
+                            <span style={{
+                              width: 36, flexShrink: 0, textAlign: "right",
+                              paddingRight: 12, color: "#404040",
+                              userSelect: "none", fontSize: 10,
+                            }}>
+                              {i + 1}
+                            </span>
+                            <span style={{ color: lineColor, whiteSpace: "pre", paddingRight: 14 }}>
+                              {line}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ height: "100%" }}>
+                    <GCodeCanvas key={gcodeVersion} gcode={g} />
                   </div>
                 )}
               </div>

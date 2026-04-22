@@ -1,24 +1,23 @@
 """
-POST /api/silhouettes — Generate 3 distinct shape silhouette variants.
+POST /api/silhouettes — Generate 3 distinct SVG shape variants via Claude.
 
-Returns Classic / Rounded / Geometric interpretations of the requested shape,
-generated concurrently via DALL-E so the caller gets all three in one round-trip.
+Uses a single Claude call (much faster than DALL-E) to return three clean
+solid-black silhouettes suitable for 3D food printing cookie-cutter paths.
 """
 from __future__ import annotations
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
+import json
+import re
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from fastapi import APIRouter
-from openai import OpenAI
 from pydantic import BaseModel
 
 load_dotenv()
 
 router = APIRouter()
-_executor = ThreadPoolExecutor(max_workers=3)
+_client = Anthropic()
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -28,78 +27,56 @@ class SilhouetteRequest(BaseModel):
 class SilhouetteVariant(BaseModel):
     label: str
     description: str
-    b64: Optional[str] = None
+    svg: str
 
 class SilhouettesResponse(BaseModel):
     variants: list[SilhouetteVariant]
 
-# ── Variant definitions ───────────────────────────────────────────────────────
+# ── System prompt ─────────────────────────────────────────────────────────────
 
-_VARIANTS = [
-    {
-        "label": "Classic",
-        "description": "Standard form",
-        "suffix": (
-            "Faithful, recognizable interpretation with natural proportions. "
-            "The silhouette must be a single fully-closed solid shape with no gaps, "
-            "holes, or floating islands — suitable for food 3D printing as a cookie-cutter path."
-        ),
-    },
-    {
-        "label": "Rounded",
-        "description": "Soft & bubbly",
-        "suffix": (
-            "Inflated, balloon-like version of the same subject. All curves are convex and smooth — "
-            "imagine the shape gently puffed up. No sharp concavities, no thin spikes. "
-            "The silhouette is a single closed solid blob, 3D-printable without supports."
-        ),
-    },
-    {
-        "label": "Geometric",
-        "description": "Angular & bold",
-        "suffix": (
-            "Stylized polygon approximation of the shape — reduce it to its essential angles "
-            "using straight edges and bold flat facets, like a low-poly design. "
-            "Fully closed solid fill, no floating pieces, distinct from the classic silhouette."
-        ),
-    },
-]
+_SYSTEM = """You are a shape designer for 3D printed food molds. Generate exactly 3 distinct SVG silhouette variants for the requested shape.
 
-# ── Generation ────────────────────────────────────────────────────────────────
+Rules:
+- All 3 variants must be recognizably the same subject — same animal/object — just different poses or proportions
+- Variant 1 (Upright): standard front-facing or three-quarter pose, faithful proportions
+- Variant 2 (Profile): strict left-facing side-profile pose, clearly distinct silhouette from variant 1
+- Variant 3 (Compact): same front pose as variant 1 but rounder, chunkier proportions — cuter/squatter version
+- SVG viewBox must be "0 0 100 100"
+- Use ONLY <path> elements with fill="black". No strokes, no gradients, no text, no <g> groups, no other elements
+- Paths must be fully closed (end with Z). No open paths
+- No ultra-thin parts narrower than 3 units — shapes must be printable
+- Center the shape within the viewBox with reasonable padding (10 units on each side)
+- Return ONLY valid JSON — absolutely no markdown, no code fences, no explanation
 
-_BASE_PROMPT = (
-    "Pure solid black (#000000) filled silhouette of {shape} on a pure white (#FFFFFF) background. "
-    "Flat 2D, centered, no texture, no internal lines, no gradients, no shading. "
-    "Single closed shape — no disconnected parts. Like a rubber stamp. {suffix}"
-)
+JSON structure (return exactly this):
+{
+  "variants": [
+    {"label": "Upright", "description": "Standing front-facing pose", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
+    {"label": "Profile", "description": "Side view walking pose", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"},
+    {"label": "Compact", "description": "Rounded compact form", "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path fill='black' d='...'/></svg>"}
+  ]
+}"""
 
-def _generate_one(shape: str, suffix: str) -> Optional[str]:
-    try:
-        client = OpenAI()
-        prompt = _BASE_PROMPT.format(shape=shape, suffix=suffix)
-        response = client.images.generate(
-            model="gpt-image-1",
-            prompt=prompt,
-            size="1024x1024",
-            quality="low",
-        )
-        return response.data[0].b64_json
-    except Exception as e:
-        print(f"[Silhouettes] Generation failed for '{shape}': {e}")
-        return None
+
+def _generate(shape: str) -> SilhouettesResponse:
+    message = _client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=4000,
+        system=_SYSTEM,
+        messages=[{"role": "user", "content": f"Generate 3 silhouette variants for: {shape}"}],
+    )
+    raw = "".join(b.text for b in message.content if hasattr(b, "text")).strip()
+    # Strip markdown fences if present despite instructions
+    raw = re.sub(r"^```[a-z]*\n?", "", raw, flags=re.MULTILINE)
+    raw = re.sub(r"```\s*$", "", raw, flags=re.MULTILINE).strip()
+    data = json.loads(raw)
+    return SilhouettesResponse(
+        variants=[SilhouetteVariant(**v) for v in data["variants"]]
+    )
 
 
 @router.post("/api/silhouettes", response_model=SilhouettesResponse)
 async def generate_silhouettes(req: SilhouetteRequest) -> SilhouettesResponse:
+    import asyncio
     loop = asyncio.get_running_loop()
-    tasks = [
-        loop.run_in_executor(_executor, _generate_one, req.shape, v["suffix"])
-        for v in _VARIANTS
-    ]
-    results = await asyncio.gather(*tasks)
-    return SilhouettesResponse(
-        variants=[
-            SilhouetteVariant(label=v["label"], description=v["description"], b64=b64)
-            for v, b64 in zip(_VARIANTS, results)
-        ]
-    )
+    return await loop.run_in_executor(None, _generate, req.shape)
